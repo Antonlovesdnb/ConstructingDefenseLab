@@ -23,6 +23,8 @@ The lab deploys the following components:
 
 ![](img/20250913103102.png)
 
+( _Please note, the AWS/Azure components are optional and require manual set up and are not included in this version of the lab, instructions for setting up cloud collection are provided in the paid versions of Constructing Defense_ )
+
 The lab is designed to act as a playground for cybersecurity research; be it blue/red/purple or just messing around.
 
 Once the lab is set up, you will have a Splunk instance full of interesting telemetry like:
