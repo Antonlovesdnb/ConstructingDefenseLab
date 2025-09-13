@@ -13,12 +13,12 @@ The lab deploys the following components:
 | Component | Purpose | Telemetry |
 |-----------|---------|-----------|
 | DC.condef.local | Serves as domain controller for Active Directory portion of the lab | - Windows Events<br>- Active Directory Telemetry (Kerberos, Certificate Services etc)<br>- Host-based (Sysmon, Native Windows Events) |
-| Certer.condef.local | Serves as Active Directory Certificate Services (ADCS) Server for the domain | - Certificate / PKI related telemetry, used mainly ADCS portion of the course |
+| Certer.condef.local | Serves as Active Directory Certificate Services (ADCS) Server for the domain | - Certificate / PKI related telemetry |
 | Win11a.condef.local | The "attacker" host, where tools will be built and utilized | - Host-based/Sysmon |
 | Win11v.condef.local | The "victim" host, will be the target of attacks | - Host-based/Sysmon |
 | Linux | The "attacking" Linux machine | - Laurel/Auditd |
 | LinuxV | The "victim" Linux machine, will be the target for Linux-based attacks, also hosts a local Kubernetes cluster | - Laurel/Auditd |
-| PCAP | Malcolm PCAP sensor for Zeek/Suricata, will be monitoring both Linux and AD traffic | PCAP, Zeek, Suricata |
+| PCAP | Malcolm PCAP sensor for Zeek/Suricata, will be monitoring both Linux and AD traffic | - PCAP, Zeek, Suricata |
 | SIEM | Splunk (500MB Daily Limit) | - Windows Events (Sysmon, Active Directory, Certificate Services)<br>- Linux Telemetry (Laurel/Auditd)<br>- Kubernetes Telemetry<br> |
 
 ![](img/20250913103102.png)
