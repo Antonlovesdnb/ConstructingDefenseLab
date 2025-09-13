@@ -181,7 +181,7 @@ Depending on where you are running Ludus, you may need fewer or additional resou
 
 ### I don't have the hardware to run this lab, what can I do ? 
 
-You may be able to provision the lab on a host with 32GB of RAM and less CPU cores. The PCAP appliance Malcolm requires the most resources, so if you have a less provisioned host, you can choose not to run the Malcolm appliance and simply follow along with the videos and screenshots of the course.
+You may be able to provision the lab on a host with 32GB of RAM and less CPU cores. The PCAP appliance Malcolm requires the most resources, so if you have a less provisioned host, you can choose not to run the Malcolm appliance.
 
 If you don't want to deploy Malcolm, comment out the following block within your `range.yml` file:
 
