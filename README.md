@@ -36,6 +36,29 @@ Once the lab is set up, you will have a Splunk instance full of interesting tele
 - Kubernetes audit logging coming from a local Minikube cluster
 - Full packet capture capabilities - including Zeek & Suricata via [Malcolm](https://malcolm.fyi/)
 
+## Screenshots 
+
+Sysmon telemetry viewed through a process tree in Splunk:
+
+![](img/20250913111306.png)
+
+
+Ingested Active Directory / Windows events in Splunk:
+
+![](img/20250913111350.png)
+
+Auditd Linux telemetry processed with Laurel:
+
+![](img/20250913111428.png)
+
+Kubernetes telemetry via Minikube local cluster: 
+
+![](img/20250913111452.png)
+
+Malcolm / Arkime full packet capture:
+
+![](img/20250913111507.png)
+
 ## Cool! How do I use it ?
 
 ### Ludus Setup
