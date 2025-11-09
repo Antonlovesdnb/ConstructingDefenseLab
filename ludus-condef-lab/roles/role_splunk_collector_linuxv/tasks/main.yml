@@ -9,7 +9,7 @@
     cmd: mkdir /opt/splunkforwarder
 - name: Download Splunk Forwarder 
   ansible.builtin.shell:
-    cmd: wget -O /opt/splunkforwarder/splunk.deb "https://download.splunk.com/products/universalforwarder/releases/9.3.2/linux/splunkforwarder-9.3.2-d8bb32809498-linux-2.6-amd64.deb"
+    cmd: wget -O /opt/splunkforwarder/splunk.deb "https://download.splunk.com/products/universalforwarder/releases/10.0.1/linux/splunkforwarder-10.0.1-c486717c322b-linux-amd64.deb"
 - name: Add Splunk User
   ansible.builtin.shell:
     cmd: useradd -m splunkfwd
