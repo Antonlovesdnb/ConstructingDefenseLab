@@ -114,13 +114,13 @@ Next up, after adding the roles, we need to tell Ludus which range config to use
 
 `.\ludus.exe range config set -f .\range.yaml`
 
-![](img/20250913103737.png)
+![](img/20251109092131.png)
 
 Note that your `ludus.exe` file may be named differently depending on how you installed the client or whether you are deploying from a Linux machine.
 
 You can now run a `ludus.exe ansible roles list` command and your roles should match the following:
 
-![](img/20250913103818.png)
+![](img/20251109092230.png)
 
 We can now deploy the range: `ludus.exe range deploy`
 
