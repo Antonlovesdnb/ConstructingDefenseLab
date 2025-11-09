@@ -86,7 +86,9 @@ Once you have the above four requirements set up, and you are the point of being
 
 ### Range Set up
 
-Once you have Ludus set up and all the relevant templates built out, you can clone this repo: `git clone https://github.com/Antonlovesdnb/ConstructingDefenseLab`
+Once you have Ludus set up and all the relevant templates built out, you can clone this repo:
+
+ `git clone https://github.com/Antonlovesdnb/ConstructingDefenseLab`
 
 The Ansible roles and Ludus range configurations will be in the `ludus-condef-lab` folder of the cloned repo.
 
