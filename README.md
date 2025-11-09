@@ -86,9 +86,11 @@ Once you have the above four requirements set up, and you are the point of being
 
 ### Range Set up
 
-Once you have Ludus set up and all the relevant templates built out, you can grab the `ludus-condef-splunk-v2.7z` file from this repo & unzip it.
+Once you have Ludus set up and all the relevant templates built out, you can clone this repo: `git clone https://github.com/Antonlovesdnb/ConstructingDefenseLab`
 
-Once you have all the files unzipped to your host, we need to install the roles:
+The Ansible roles and Ludus range configurations will be in the `ludus-condef-lab` folder of the cloned repo.
+
+Navigate to this folder and then add all the various roles: 
 
 ```
 ludus.exe ansible role add -d .\roles\role_gpo_deploy\
@@ -106,9 +108,9 @@ ludus.exe ansible role add -d .\roles\role_malcolm_install\
 ludus.exe ansible role add ansible roles add badsectorlabs.ludus_adcs
 ```
 
-Note here that your `ludus.exe` may be named differently. When running this commands, ensure that you inside the `ludus-condef-splunk-v2` directory as well. 
+Note here that your `ludus.exe` may be named differently. When running this commands, ensure that you inside the `ludus-condef-lab` directory as well. 
 
-Next up, we need to tell Ludus which range config to use. We can use the following command:
+Next up, after adding the roles, we need to tell Ludus which range config to use. We can use the following command:
 
 `.\ludus.exe range config set -f .\range.yaml`
 
