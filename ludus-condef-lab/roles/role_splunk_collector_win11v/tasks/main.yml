@@ -7,11 +7,11 @@
 
       Write-Host "Downloading Splunk Forwarder..."
 
-      Invoke-WebRequest -UseBasicParsing "https://download.splunk.com/products/universalforwarder/releases/9.3.2/windows/splunkforwarder-9.3.2-d8bb32809498-x64-release.msi" -OutFile C:\SplunkFiles\forwarder.msi
+      Invoke-WebRequest -UseBasicParsing "https://download.splunk.com/products/universalforwarder/releases/10.0.1/windows/splunkforwarder-10.0.1-c486717c322b-windows-x64.msi" -OutFile C:\SplunkFiles\forwarder.msi
 
       Write-Host "Downloading Windows TA App..."
 
-      Invoke-WebRequest -UseBasicParsing "https://github.com/Antonlovesdnb/ConstructingDefense/raw/refs/heads/main/splunkappswin11v.zip" -OutFile C:\SplunkFiles\splunkappswin11v.zip
+      Invoke-WebRequest -UseBasicParsing "https://github.com/Antonlovesdnb/ConstructingDefenseLab/raw/refs/heads/main/files/splunkappswin11v.zip" -OutFile C:\SplunkFiles\splunkappswin11v.zip
 
       Write-Host "Installing Forwarder..."
 
