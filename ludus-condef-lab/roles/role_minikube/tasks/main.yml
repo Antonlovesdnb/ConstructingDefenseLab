@@ -4,9 +4,14 @@
 - name: Install Dependencies
   ansible.builtin.shell:
     cmd: apt-get -y install ca-certificates curl gnupg
+- name: Check if Docker GPG key exists
+  ansible.builtin.stat:
+    path: /etc/apt/keyrings/docker.gpg
+  register: docker_gpg_key
 - name: Install Docker GPG Keys
   ansible.builtin.shell:
     cmd: install -m 0755 -d /etc/apt/keyrings && curl -kfsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && chmod a+r /etc/apt/keyrings/docker.gpg
+  when: not docker_gpg_key.stat.exists
 - name: Add Docker Repo 
   ansible.builtin.shell:
     cmd: echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
