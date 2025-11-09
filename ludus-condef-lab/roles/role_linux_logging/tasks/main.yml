@@ -1,0 +1,9 @@
+- name: Install Wget
+  ansible.builtin.shell:
+    cmd: apt-get -y install wget
+- name: Download Linux Logging Script
+  ansible.builtin.shell:
+    cmd: wget --no-check-certificate https://github.com/Antonlovesdnb/ConstructingDefense/raw/main/linux_logging.sh -O linux_logging.sh && chmod +x linux_logging.sh
+- name: Run Linux Logging Script
+  ansible.builtin.shell:
+    cmd: bash linux_logging.sh

@@ -1,0 +1,32 @@
+- name: Run PowerShell Script to Deploy Splunk Forwarder to CERTER.condef.local
+  ansible.windows.win_powershell:
+    script: |
+      Write-Host "Creating Directory..."
+
+      New-Item -Path C:\ -Name SplunkFiles -ItemType Directory
+
+      Write-Host "Downloading Splunk Forwarder..."
+
+      Invoke-WebRequest -UseBasicParsing "https://download.splunk.com/products/universalforwarder/releases/9.3.2/windows/splunkforwarder-9.3.2-d8bb32809498-x64-release.msi" -OutFile C:\SplunkFiles\forwarder.msi
+
+      Write-Host "Downloading Windows TA App..."
+
+      Invoke-WebRequest -UseBasicParsing "https://github.com/Antonlovesdnb/ConstructingDefense/raw/refs/heads/main/splunkappscerter.zip" -OutFile C:\SplunkFiles\splunkappscerter.zip
+
+      Write-Host "Installing Forwarder..."
+
+      Start-Process msiexec.exe -ArgumentList '/I C:\SplunkFiles\forwarder.msi AGREETOLICENSE=Yes SPLUNKUSERNAME=Condef SPlUNKPASSWORD=Temp1234!! RECEIVING_INDEXER="DC:9997" /quiet' -PassThru -Wait
+
+      Write-Host "Installing Windows TA App.."
+
+      Expand-Archive -LiteralPath C:\SplunkFiles\splunkappscerter.zip -DestinationPath 'C:\Program Files\SplunkUniversalForwarder\etc\apps'
+
+      Start-Process sc.exe -ArgumentList 'config "splunkforwarder" obj="Localsystem"'
+
+      Write-Host "Restarting Splunk Forwarder"
+
+      Restart-Service SplunkForwarder
+
+      Write-Host "Disabling Firewall"
+
+      Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False

@@ -1,0 +1,5 @@
+splunk_admin_password: "Temp1234!!"
+splunk_hec_token_name: "Kubernetes Collection"
+splunk_hec_token_description: "K8s Logs from LinuxV"
+splunk_index_name: "kube"
+splunk_hec_disable_ssl: true

@@ -1,0 +1,45 @@
+- name: Run PowerShell Script to Deploy Constructing Defense GPOs
+  ansible.windows.win_powershell:
+    script: |
+      Write-Host "Creating GPO Directory..."
+
+      New-Item -Path 'C:\Users\Administrator\Desktop' -Name GPO -ItemType Directory
+
+      Write-Host "Downloading Zip..."
+
+      Invoke-WebRequest -UseBasicParsing https://github.com/Antonlovesdnb/ConstructingDefense/raw/main/CondefGPO.zip -OutFile C:\Users\Administrator\Desktop\GPO\CondefGPO.zip
+
+      Write-Host "Sleeping for a 5 seconds.."
+
+      Start-Sleep -Seconds 5
+
+      Write-Host "Expanding Archive ..."
+
+      Expand-Archive -Path 'C:\Users\Administrator\Desktop\GPO\CondefGPO.zip' -DestinationPath 'C:\Users\Administrator\Desktop\GPO'
+
+      Write-Host "Sleeping for a 10 seconds.."
+
+      Start-Sleep -Seconds 10
+
+
+      Write-Host "Creating and Linking Logging GPO"
+
+      New-GPO -Name GPO-Logging
+      Import-GPO -BackupGpoName 'GPO-Logging' -TargetName 'GPO-Logging' -Path 'C:\Users\Administrator\Desktop\GPO\CondefGPO'
+      New-GPLink -Name "GPO-Logging" -Target "dc=condef,dc=local" -LinkEnabled Yes
+
+      Write-Host "Creating and Linking ADCS GPO"
+
+      New-GPO -Name GPO-CertEnroll
+      Import-GPO -BackupGpoName 'GPO-CertEnroll' -TargetName 'GPO-CertEnroll' -Path 'C:\Users\Administrator\Desktop\GPO\CondefGPO'
+      New-GPLink -Name "GPO-CertEnroll" -Target "dc=condef,dc=local" -LinkEnabled Yes
+
+      Write-Host "Creating and Linking Disable Defender GPO"
+
+      New-GPO -Name GPO-DisableDefender
+      Import-GPO -BackupGpoName 'GPO-DisableDefender' -TargetName 'GPO-DisableDefender' -Path 'C:\Users\Administrator\Desktop\GPO\CondefGPO'
+      New-GPLink -Name "GPO-DisableDefender" -Target "dc=condef,dc=local" -LinkEnabled Yes
+
+      Write-Host "All Done.."
+
+      gpupdate /force

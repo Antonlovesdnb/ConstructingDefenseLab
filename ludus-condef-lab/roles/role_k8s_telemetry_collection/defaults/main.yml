@@ -1,0 +1,2 @@
+k8s_cluster_name: "minikube"
+k8s_splunk_index: "kube"

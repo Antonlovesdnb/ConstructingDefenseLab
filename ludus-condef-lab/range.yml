@@ -1,0 +1,182 @@
+ludus:
+  - vm_name: "{{ range_id }}-DC" # The name of the VM in Proxmox. You can use the `{{ range_id }}` template string which resolves to your range ID (i.e. JS)
+    hostname: "{{ range_id }}-DC"   # The hostname for the VM. Note: Windows host names are limited to 15 characters due to NETBIOS
+    template: win2022-server-x64-template  # The template that will be the base for this VM (`ludus templates list` to get a list of them)
+    vlan: 10            # The VLAN for this VM. This number will be the third octet of the VM's IP and must be 2<=vlan<=255
+    ip_last_octet: 11   # The last octet for this VM's IP address. Must be unique in the VLAN.
+    ram_gb: 8           # The amount of RAM for this VM
+    cpus: 4             # The number of cpu cores to allocate to this VM (can provision more CPUs than the host physically has)
+    windows:            # This key must be set for windows VMs - all subkeys are optional
+      sysprep: false    # Set to true to run sysprep before any other tasks on this VM. Default: false
+    domain:               # Define this key to put this machine in a domain
+      fqdn: condef.local # The FQDN of the domain
+      role: primary-dc    # The role of the VM in the domain (primary-dc|alt-dc|member)
+    roles:
+      - role_gpo_deploy
+      - role_sysmon_install
+      - role_splunk_install
+      - role_splunk_hec_validate
+    role_vars:
+      splunk_admin_password: "Temp1234!!"
+      splunk_hec_token_name: "K8s"
+      splunk_hec_token_description: "K8s Logs from LinuxV"
+      splunk_index_name: "kube"
+      splunk_hec_disable_ssl: true
+      ludus_splunk_expected_token: "b448817b-e664-4fce-93fa-79d0c90ba57"
+
+    testing:                # This key controls the behavior of the VM in testing mode. If undefined, both values are set to true
+      snapshot: true        # Snapshot this VM going into testing, and revert it coming out of testing. Default: true
+      block_internet: true  # Cut this VM off from the internet during testing. Default true
+
+  - vm_name: "{{ range_id }}-CERTER"
+    hostname: "{{ range_id }}-CERTER"
+    template: win2022-server-x64-template
+    vlan: 10
+    ip_last_octet: 12
+    ram_gb: 8
+    cpus: 4
+    windows:
+      sysprep: true
+      install_additional_tools: false     # Install firefox, chrome, VSCode, burp suite, 7zip, process hacker, ilspy and other useful utilities. Default: false
+      chocolatey_ignore_checksums: false # Set to true to ignore any checksum errors when installing chocolatey packages (for packages that are 3rd party hosted and update before the choco package hash updates). Default: false
+      chocolatey_packages:
+        - notepadplusplus                # An array of chocolatey package names you'd like installed on this VM. Default: none
+    domain:
+      fqdn: condef.local
+      role: member
+    roles:
+      - badsectorlabs.ludus_adcs
+      - role_splunk_collector_certer
+    role_vars:
+      ludus_adcs_domain: condef.local
+      ludus_adcs_ca_host: CERTER
+      ludus_adcs_domain_username: "condef.local\\Administrator"
+      ludus_adcs_domain_password: 'Temp1234!!'
+      ludus_adcs_ca_common_name: certer-CA
+      ludus_adcs_esc1: true
+      ludus_adcs_esc2: false
+      ludus_adcs_esc3: false
+      ludus_adcs_esc3_cra: false
+      ludus_adcs_esc4: false
+      ludus_adcs_esc6: false
+      ludus_adcs_esc8: false
+      ludus_adcs_esc13: false
+      ludus_adcs_esc5: false
+      ludus_adcs_esc7: false
+      ludus_adcs_esc9: false
+      ludus_adcs_esc11: false
+      ludus_adcs_esc15: false
+      ludus_adcs_esc16: false
+
+
+
+  - vm_name: "{{ range_id }}-WIN11V"
+    hostname: "{{ range_id }}-WIN11V"
+    template: win11-22h2-x64-enterprise-template
+    vlan: 10
+    ip_last_octet: 13
+    ram_gb: 8
+    cpus: 4
+    windows:
+      sysprep: false
+      install_additional_tools: false     # Install firefox, chrome, VSCode, burp suite, 7zip, process hacker, ilspy and other useful utilities. Default: false
+      chocolatey_ignore_checksums: false # Set to true to ignore any checksum errors when installing chocolatey packages (for packages that are 3rd party hosted and update before the choco package hash updates). Default: false
+      chocolatey_packages:
+        - notepadplusplus,7zip        # An array of chocolatey package names you'd like installed on this VM. Default: none
+    domain:
+      fqdn: condef.local
+      role: member
+    roles:
+      - role_sysmon_install
+      - role_splunk_collector_win11v
+
+
+  - vm_name: "{{ range_id }}-WIN11A"
+    hostname: "{{ range_id }}-WIN11A"
+    template: win11-22h2-x64-enterprise-template
+    vlan: 10
+    ip_last_octet: 14
+    ram_gb: 8
+    cpus: 4
+    windows:
+      sysprep: false
+      install_additional_tools: false     # Install firefox, chrome, VSCode, burp suite, 7zip, process hacker, ilspy and other useful utilities. Default: false
+      chocolatey_ignore_checksums: false # Set to true to ignore any checksum errors when installing chocolatey packages (for packages that are 3rd party hosted and update before the choco package hash updates). Default: false
+      chocolatey_packages:
+        - notepadplusplus,7zip                # An array of chocolatey package names you'd like installed on this VM. Default: none
+    domain:
+      fqdn: condef.local
+      role: member
+    roles: 
+      - role_sysmon_install
+      - role_splunk_collector_win11a
+
+
+  - vm_name: "{{ range_id }}-linuxa"
+    hostname: "{{ range_id }}-linuxa"
+    template: debian-12-x64-server-template
+    vlan: 10
+    ip_last_octet: 15
+    ram_gb: 8
+    cpus: 4
+    linux: true
+
+  - vm_name: "{{ range_id }}-linuxv"
+    hostname: "{{ range_id }}-linuxv"
+    template: debian-12-x64-server-template
+    vlan: 10
+    ip_last_octet: 16
+    ram_gb: 16
+    cpus: 6
+    linux: true
+    roles:
+      - role_linux_logging
+      - role_minikube
+      - role_splunk_collector_linuxv
+      - name : role_k8s_telemetry_collection
+        depends_on:
+          - vm_name: "{{ range_id }}-DC"
+            role: role_splunk_hec_validate
+    role_vars:
+      k8s_cluster_name: "minkube"
+      k8s_splunk_index: "kube"
+      ludus_k8s_splunk_hec_token: "b448817b-e664-4fce-93fa-79d0c90ba57"
+      # Calculate Splunk server IP based on VLAN and octet
+      ludus_k8s_splunk_server_ip: "10.2.10.11"
+
+
+  - vm_name: "{{ range_id }}-pcap"
+    hostname: "{{ range_id }}-pcap"
+    template: debian-12-x64-server-template
+    vlan: 10
+    ip_last_octet: 17
+    ram_gb: 32
+    cpus: 6
+    linux: true
+    roles:
+      - role_malcolm_install
+
+router:
+  vm_name: "{{ range_id }}-router" # The name of the router VM deployed by Ludus
+
+# This key defines network rules in your range. It is optional, and by default all traffic is allowed
+network: 
+  inter_vlan_default: ACCEPT # The default rule to apply to traffic between VLANs. Default: ACCEPT
+  external_default: ACCEPT   # The default rule to apply to traffic leaving the range out to the internet. Default: ACCEPT
+
+# These values control the values Ludus uses when deploying ranges and Windows domains.
+# The values shown here are the defaults that will be set if this key is not defined
+# If you define the defaults key, you must set every value as it overrides the server set defaults dict
+# Users may wish to change these values to emulate environments (functional level, domain admin username and password, etc)
+defaults:
+  snapshot_with_RAM: true                  # When entering testing mode, capture the RAM state which allows reverting to a running VM
+  stale_hours: 0                           # How many hours until a pre-existing snapshot should be deleted and retaken (if entering and exiting testing mode quickly)
+  ad_domain_functional_level: Win2012R2    # The functional level of each Windows domain created by Ludus - options are: "Win2003", "Win2008", "Win2008R2", "Win2012", "Win2012R2", or "WinThreshold"
+  ad_forest_functional_level: Win2012R2    # The functional level of each Windows forest created by Ludus - options are: "Win2003", "Win2008", "Win2008R2", "Win2012", "Win2012R2", or "WinThreshold"
+  ad_domain_admin: Administrator             # The domain admin username for every Windows domain
+  ad_domain_admin_password: 'Temp1234!!'       # The domain admin password for every Windows domain
+  ad_domain_user: condef               # The domain user username for every Windows domain
+  ad_domain_user_password: 'Temp1234!!'        # The domain user password for every Windows domain
+  ad_domain_safe_mode_password: 'Temp1234!!'   # The domain safe mode password for every Windows domain
+  timezone: America/New_York               # The timezone for all VMs, use the TZ identifier format from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  enable_dynamic_wallpaper: true

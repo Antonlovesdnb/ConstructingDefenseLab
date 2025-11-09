@@ -1,0 +1,68 @@
+- name: Run PowerShell Script to Deploy Splunk Server to DC.condef.local
+  ansible.windows.win_powershell:
+    script: |
+      Write-Host "Creating Directory..."
+
+      New-Item -Path C:\ -Name SplunkFiles -ItemType Directory
+
+      Write-Host "Downloading Splunk..."
+
+      Invoke-WebRequest -UseBasicParsing https://download.splunk.com/products/splunk/releases/9.3.2/windows/splunk-9.3.2-d8bb32809498-x64-release.msi -OutFile C:\SplunkFiles\splunk.msi
+
+      Write-Host "Downloading Splunk Apps..."
+
+      Invoke-WebRequest -UseBasicParsing https://github.com/Antonlovesdnb/ConstructingDefense/raw/refs/heads/main/splunkappsdc.zip -OutFile C:\SplunkFiles\splunkappsdc.zip
+
+      Write-Host "Starting Splunk Install..."
+
+      Start-Process msiexec.exe -ArgumentList '/I C:\SplunkFiles\splunk.msi AGREETOLICENSE=Yes SPLUNKUSERNAME=Condef SPlUNKPASSWORD=Temp1234!! /quiet' -PassThru -Wait
+
+      Write-Host "Creating Indexes..."
+
+      Start-Sleep -Seconds 15
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index winlogs -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index sysmon -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index linux -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index azure -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index aws -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index kube -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index etw -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Write-Host "Enabling Listener ... "
+
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "enable listen 9997 -auth condef:Temp1234!!"
+
+      Start-Sleep -Seconds 15
+
+      Write-Host "Configuring Apps..."
+
+      Expand-Archive -LiteralPath C:\SplunkFiles\splunkappsdc.zip -DestinationPath 'C:\Program Files\Splunk\etc\apps\'
+
+      Restart-Service -Name splunkd
+
+      Start-Sleep -Seconds 30
+
+      Write-Host "Disabling Firewall"
+
+      Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False

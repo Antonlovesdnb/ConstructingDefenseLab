@@ -1,0 +1,97 @@
+- name: Docker fix
+  ansible.builtin.shell:
+    cmd: rm -f /etc/apt/sources.list.d/docker.list
+- name: Update packages
+  ansible.builtin.shell:
+    cmd: apt-get -y update
+- name: Install Dependencies
+  ansible.builtin.shell:
+    cmd: apt-get -y install ca-certificates curl gnupg wget apache2-utils cron dialog git jq make openssl tmux xz-utils ca-certificates lsb-release python3 python3-pip python3-setuptools python3-yaml python3-requests
+- name: Update packages Again
+  ansible.builtin.shell:
+    cmd: apt-get -y update
+- name: Install Docker GPG Keys
+  ansible.builtin.shell:
+    cmd: install -m 0755 -d /etc/apt/keyrings && curl -kfsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && chmod a+r /etc/apt/keyrings/docker.gpg
+- name: Add Docker Repo 
+  ansible.builtin.shell:
+    cmd: echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+- name: Update packages Again
+  ansible.builtin.shell:
+    cmd: apt-get -y update
+- name: Install Docker Packages
+  ansible.builtin.shell:
+    cmd: apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+- name: Create Docker Group
+  ansible.builtin.shell:
+    cmd: groupadd -f docker
+- name: Add the user 'debian' to primary group of 'docker'
+  ansible.builtin.user:
+    name: debian
+    comment: Debian User
+    uid: 1000
+    groups: docker
+    append: true
+- name: Reset connection to apply new group memberships
+  meta: reset_connection
+- name: Download Malcolm Install Script 
+  ansible.builtin.shell:
+    cmd: wget --no-check-certificate -O /home/debian/malcolm_debian12_installer.sh "https://raw.githubusercontent.com/Antonlovesdnb/ConstructingDefense/refs/heads/main/malcolm_debian12_installer.sh"
+- name: Add Execute Perms to Script
+  ansible.builtin.shell:
+   cmd: chmod +x /home/debian/malcolm_debian12_installer.sh
+- name: Check if script exists and is executable
+  ansible.builtin.stat:
+    path: /home/debian/malcolm_debian12_installer.sh
+  register: script_stat
+- name: Show script status
+  debug:
+    var: script_stat
+- name: Test script syntax
+  ansible.builtin.shell:
+    cmd: bash -n /home/debian/malcolm_debian12_installer.sh
+  become: yes
+  register: syntax_check
+  ignore_errors: yes
+- name: Show syntax check result
+  debug:
+    var: syntax_check
+- name: Run Malcolm Install Script, this is pulling containers and will take a while
+  ansible.builtin.shell:
+    cmd: bash -x /home/debian/malcolm_debian12_installer.sh 2>&1 | tee /tmp/malcolm_install.log
+    chdir: /home/debian
+  become: yes
+  async: 3600  # 1 hour timeout
+  poll: 10     # check every 10 seconds
+  register: script_result
+- name: Show final script output
+  debug:
+    var: script_result.stdout_lines
+- name: Check if Malcolm directory exists in /root
+  ansible.builtin.stat:
+    path: /root/Malcolm
+  register: malcolm_root_dir
+- name: Move Malcolm directory if it exists
+  ansible.builtin.shell:
+    cmd: mv /root/Malcolm /home/debian/Malcolm
+  become: yes
+  when: malcolm_root_dir.stat.exists
+- name: Fix ownership of Malcolm directory
+  ansible.builtin.file:
+    path: /home/debian/Malcolm
+    owner: debian
+    group: debian
+    recurse: yes
+  become: yes
+  when: malcolm_root_dir.stat.exists
+- name: Run Malcolm Install Script again as non-root to set up auth, this will be quicker and we're almost done 
+  ansible.builtin.shell:
+    cmd: bash -x /home/debian/malcolm_debian12_installer.sh 
+    chdir: /home/debian
+  become: yes
+  become_user: debian
+- name: Start Malcolm, this might take a few minutes - last step
+  ansible.builtin.shell:
+    cmd: /home/debian/Malcolm/scripts/start
+  become: yes
+  become_user: debian

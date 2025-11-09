@@ -1,0 +1,243 @@
+- name: Check if running on Linux
+  assert:
+    that:
+      - ansible_os_family == "Debian" or ansible_os_family == "RedHat"
+    fail_msg: "This role is designed for Linux systems only"
+
+- name: Validate required variables are provided
+  assert:
+    that:
+      - ludus_k8s_splunk_hec_token is defined
+      - ludus_k8s_splunk_server_ip is defined
+      - k8s_cluster_name is defined
+      - k8s_splunk_index is defined
+    fail_msg: "Required variables ludus_k8s_splunk_hec_token, ludus_k8s_splunk_server_ip, k8s_cluster_name, and k8s_splunk_index must be defined"
+
+- name: Add the user 'debian' to primary group of 'docker'
+  ansible.builtin.user:
+    name: debian
+    comment: Debian User
+    uid: 1000
+    groups: docker
+    append: true
+    
+- name: Reset connection to apply new group memberships
+  meta: reset_connection
+
+- name: Set Splunk connection variables
+  set_fact:
+    splunk_server_ip: "{{ ludus_k8s_splunk_server_ip }}"
+    splunk_hec_token: "{{ ludus_k8s_splunk_hec_token }}"
+    splunk_endpoint: "http://{{ ludus_k8s_splunk_server_ip }}:8088/services/collector"
+
+- name: Test Splunk connectivity
+  uri:
+    url: "{{ splunk_endpoint }}"
+    method: POST
+    headers:
+      Authorization: "Splunk {{ splunk_hec_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      event: "Test connection from {{ inventory_hostname }}"
+      source: "ludus_test"
+      sourcetype: "ludus:test"
+      index: "{{ k8s_splunk_index }}"
+    status_code: 200
+  register: splunk_test
+  retries: 5
+  delay: 30
+
+- name: Display connectivity test result
+  debug:
+    msg: "Successfully connected to Splunk HEC endpoint"
+
+- name: Update package cache
+  package:
+    update_cache: yes
+  become: yes
+
+- name: Install required packages
+  package:
+    name:
+      - curl
+      - wget
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - software-properties-common
+    state: present
+  become: yes
+- name: Create minikube audit policy directory
+  file:
+    path: "{{ ansible_env.HOME }}/.minikube/files/etc/ssl/certs"
+    state: directory
+    mode: '0755'
+
+- name: Create Kubernetes audit policy
+  copy:
+    content: |
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      omitStages:
+        - "RequestReceived"
+      rules:
+        - level: RequestResponse
+          resources:
+          - group: ""
+            resources: ["pods"]
+        - level: Metadata
+          resources:
+          - group: ""
+            resources: ["pods/log", "pods/status"]
+        - level: None
+          resources:
+          - group: ""
+            resources: ["configmaps"]
+            resourceNames: ["controller-leader"]
+        - level: None
+          users: ["system:kube-proxy"]
+          verbs: ["watch"]
+          resources:
+          - group: ""
+            resources: ["endpoints", "services"]
+        - level: None
+          userGroups: ["system:authenticated"]
+          nonResourceURLs:
+          - "/api*"
+          - "/version"
+        - level: Request
+          resources:
+          - group: ""
+            resources: ["configmaps"]
+          namespaces: ["kube-system"]
+        - level: Metadata
+          resources:
+          - group: ""
+            resources: ["secrets", "configmaps"]
+        - level: Request
+          resources:
+          - group: ""
+          - group: "extensions"
+        - level: Metadata
+          omitStages:
+            - "RequestReceived"
+    dest: "{{ ansible_env.HOME }}/.minikube/files/etc/ssl/certs/audit-policy.yaml"
+    mode: '0644'
+
+- name: Stop existing minikube cluster
+  command: minikube stop
+  failed_when: false
+
+- name: Start minikube with audit logging
+  ansible.builtin.shell: 
+    cmd: minikube start \
+      --extra-config=apiserver.audit-policy-file=/etc/ssl/certs/audit-policy.yaml \
+      --extra-config=apiserver.audit-log-path=-
+  become: true
+  become_user: debian
+
+  environment:
+    CHANGE_MINIKUBE_NONE_USER: true
+  register: minikube_start
+
+- name: Wait for minikube to be ready
+  command: kubectl wait --for=condition=Ready nodes --all --timeout=300s
+  become: true
+  become_user: debian
+  retries: 5
+  delay: 30
+
+- name: Add Splunk OpenTelemetry Collector Helm repository
+  command: helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart
+  register: helm_repo_add
+  changed_when: "'already exists' not in helm_repo_add.stderr"
+  become: true
+  become_user: debian
+
+- name: Update Helm repositories
+  command: helm repo update
+  become: true
+  become_user: debian
+
+- name: Check if Splunk collector is already installed
+  command: helm list --filter "my-splunk-otel-collector" -q
+  become: true
+  become_user: debian
+  register: helm_check
+  changed_when: false
+
+- name: Uninstall existing Splunk collector if present
+  command: helm uninstall my-splunk-otel-collector
+  become: true
+  become_user: debian
+  when: helm_check.stdout | length > 0
+
+- name: Install Splunk OpenTelemetry Collector
+  command: >
+    helm install my-splunk-otel-collector
+    --set="splunkPlatform.endpoint={{ splunk_endpoint }}"
+    --set="splunkPlatform.token={{ splunk_hec_token }}"
+    --set="splunkPlatform.index={{ k8s_splunk_index }}"
+    --set="clusterName={{ k8s_cluster_name }}"
+    --set="logsEngine=otel"
+    --set="splunkPlatform.logsEnabled=true"
+    splunk-otel-collector-chart/splunk-otel-collector
+  become: true
+  become_user: debian
+  register: helm_install
+
+- name: Verify deployment
+  command: kubectl get pods -A
+  become: true
+  become_user: debian
+  register: k8s_pods
+
+- name: Get collector pods specifically
+  command: kubectl get pods -l app.kubernetes.io/name=splunk-otel-collector -o wide
+  become: true
+  become_user: debian
+  register: collector_pods
+
+- name: Test log generation
+  command: kubectl run test-pod --image=busybox --restart=Never -- /bin/sh -c "echo 'Test log from {{ k8s_cluster_name }}'; sleep 30"
+  become: true
+  become_user: debian
+  failed_when: false
+
+- name: Save deployment summary
+  copy:
+    content: |
+      Kubernetes Telemetry Deployment Summary
+      =====================================
+      
+      Cluster: {{ k8s_cluster_name }}
+      Splunk Endpoint: {{ splunk_endpoint }}
+      HEC Token: {{ splunk_hec_token }}
+      Target Index: {{ k8s_splunk_index }}
+      
+      Deployment Status:
+      {{ k8s_pods.stdout }}
+      
+      Collector Pods:
+      {{ collector_pods.stdout }}
+      
+      Deployed: {{ ansible_date_time.iso8601 }}
+    dest: "/tmp/k8s_telemetry_deployment.txt"
+    mode: '0644'
+
+- name: Display deployment completion
+  debug:
+    msg: |
+      Kubernetes Telemetry Setup Complete!
+      
+      Configuration:
+      - Cluster: {{ k8s_cluster_name }}
+      - Splunk Endpoint: {{ splunk_endpoint }}
+      - Target Index: {{ k8s_splunk_index }}
+      
+      Collector Status:
+      {{ collector_pods.stdout }}
+      
+      Check Splunk for incoming telemetry data in index "{{ k8s_splunk_index }}"

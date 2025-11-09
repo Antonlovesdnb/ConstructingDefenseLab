@@ -1,0 +1,335 @@
+- name: Check if running on Windows
+  assert:
+    that:
+      - ansible_os_family == "Windows"
+    fail_msg: "This role is designed for Windows systems only"
+
+- name: Validate required variables
+  assert:
+    that:
+      - splunk_admin_password is defined
+      - ludus_splunk_expected_token is defined
+      - splunk_hec_token_name is defined
+      - splunk_index_name is defined
+    fail_msg: "Required variables are not defined"
+
+- name: Create Splunk configuration directory
+  win_file:
+    path: "C:\\ludus\\splunk"
+    state: directory
+
+- name: Check if Splunk is installed and service exists
+  win_service:
+    name: splunkd
+  register: splunk_service_check
+  failed_when: false
+
+- name: Verify Splunk installation
+  assert:
+    that:
+      - splunk_service_check.state is defined
+    fail_msg: |
+      Splunk service 'splunkd' not found. 
+      This indicates that role_splunk_install may not have completed successfully.
+      Please ensure Splunk is installed before running this role.
+
+- name: Start Splunk service if not running
+  win_service:
+    name: splunkd
+    state: started
+  register: splunk_start_attempt
+  retries: 5
+  delay: 15
+
+- name: Create file-based HEC configuration script
+  win_copy:
+    content: |
+      # File-based Splunk HEC Configuration Script
+      param(
+          [string]$SplunkHome = "C:\Program Files\Splunk",
+          [string]$Username = "admin",
+          [string]$Password = "{{ splunk_admin_password }}",
+          [string]$TokenName = "{{ splunk_hec_token_name }}",
+          [string]$TokenDescription = "{{ splunk_hec_token_description }}",
+          [string]$IndexName = "{{ splunk_index_name }}",
+          [string]$ExpectedToken = "{{ ludus_splunk_expected_token }}",
+          [bool]$DisableSSL = ${{ splunk_hec_disable_ssl | lower }}
+      )
+
+      Write-Host "File-based Splunk HEC Configuration"
+      Write-Host "===================================="
+
+      $success = $true
+      $hecConfigDir = "$SplunkHome\etc\apps\splunk_httpinput\local"
+      $indexConfigDir = "$SplunkHome\etc\system\local"
+
+      # Step 1: Create configuration directories with full path creation
+      Write-Host "Creating configuration directories..."
+      try {
+          # Create the full splunk_httpinput app structure if it doesn't exist
+          $splunkHttpInputApp = "$SplunkHome\etc\apps\splunk_httpinput"
+          $splunkHttpInputDefault = "$splunkHttpInputApp\default"
+          $splunkHttpInputLocal = "$splunkHttpInputApp\local"
+          $splunkHttpInputMetadata = "$splunkHttpInputApp\metadata"
+          
+          Write-Host "Checking Splunk installation at: $SplunkHome"
+          if (-not (Test-Path $SplunkHome)) {
+              Write-Host "ERROR: Splunk installation not found at $SplunkHome"
+              Write-Host "Please verify Splunk installation path"
+              exit 1
+          }
+          
+          Write-Host "Creating splunk_httpinput app structure..."
+          @($splunkHttpInputApp, $splunkHttpInputDefault, $splunkHttpInputLocal, $splunkHttpInputMetadata) | ForEach-Object {
+              if (-not (Test-Path $_)) {
+                  New-Item -Path $_ -ItemType Directory -Force | Out-Null
+                  Write-Host "Created directory: $_"
+              } else {
+                  Write-Host "Directory exists: $_"
+              }
+          }
+          
+          # Create app.conf for splunk_httpinput app
+          $appConfPath = "$splunkHttpInputApp\default\app.conf"
+          if (-not (Test-Path $appConfPath)) {
+              $appConf = @"
+      [install]
+      is_configured = 0
+
+      [ui]
+      is_visible = 1
+      label = HTTP Event Collector
+
+      [launcher]
+      author = Splunk
+      description = HTTP Event Collector
+      version = 1.0
+
+      "@
+              $appConf | Out-File -FilePath $appConfPath -Encoding UTF8
+              Write-Host "Created app.conf: $appConfPath"
+          }
+          
+          # Create metadata/default.meta
+          $metaPath = "$splunkHttpInputMetadata\default.meta"
+          if (-not (Test-Path $metaPath)) {
+              $metaContent = @"
+      [views]
+      access = read : [ * ], write : [ admin, power ]
+
+      [transforms]
+      access = read : [ * ], write : [ admin, power ]
+
+      "@
+              $metaContent | Out-File -FilePath $metaPath -Encoding UTF8
+              Write-Host "Created metadata: $metaPath"
+          }
+          
+          # Verify system local directory
+          if (-not (Test-Path $indexConfigDir)) {
+              New-Item -Path $indexConfigDir -ItemType Directory -Force | Out-Null
+              Write-Host "Created system config directory: $indexConfigDir"
+          }
+          
+          Write-Host "All directories created successfully"
+          $hecConfigDir = $splunkHttpInputLocal
+      } catch {
+          Write-Host "Failed to create directories: $($_.Exception.Message)"
+          $success = $false
+      }
+
+      # Step 2: Create index configuration
+      if ($success) {
+          Write-Host "Creating index configuration..."
+          try {
+              $indexConfigPath = "$indexConfigDir\indexes.conf"
+              $indexConfig = @"
+      [$IndexName]
+      homePath = `$SPLUNK_DB\$IndexName\db
+      coldPath = `$SPLUNK_DB\$IndexName\colddb
+      thawedPath = `$SPLUNK_DB\$IndexName\thaweddb
+      "@
+              $indexConfig | Out-File -FilePath $indexConfigPath -Encoding UTF8 -Append
+              Write-Host "Index configuration written to: $indexConfigPath"
+          } catch {
+              Write-Host "Failed to create index config: $($_.Exception.Message)"
+          }
+      }
+
+      # Step 3: Create HEC global configuration
+      if ($success) {
+          Write-Host "Creating HEC global configuration..."
+          try {
+              $inputsConfigPath = "$hecConfigDir\inputs.conf"
+              
+              # HEC global settings
+              if ($DisableSSL) {
+                  $enableSSL = "0"
+              } else {
+                  $enableSSL = "1"
+              }
+              
+              $hecGlobalConfig = "[http]`ndisabled = 0`nport = 8088`nenableSSL = $enableSSL`ndedicatedIoThreads = 2`nmaxSockets = 0`nmaxThreads = 0`nuseDeploymentServer = 0`n`n"
+              $hecGlobalConfig | Out-File -FilePath $inputsConfigPath -Encoding UTF8
+              Write-Host "HEC global config written to: $inputsConfigPath"
+          } catch {
+              Write-Host "Failed to create HEC global config: $($_.Exception.Message)"
+              $success = $false
+          }
+      }
+
+      # Step 4: Create HEC token configuration
+      if ($success) {
+          Write-Host "Creating HEC token configuration..."
+          try {
+              $inputsConfigPath = "$hecConfigDir\inputs.conf"
+              
+              $tokenConfig = "[http://$TokenName]`ndisabled = 0`ntoken = $ExpectedToken`ndescription = $TokenDescription`nindex = $IndexName`nsourcetype = kubernetes`n`n"
+              $tokenConfig | Out-File -FilePath $inputsConfigPath -Encoding UTF8 -Append
+              Write-Host "HEC token config appended to: $inputsConfigPath"
+          } catch {
+              Write-Host "Failed to create token config: $($_.Exception.Message)"
+              $success = $false
+          }
+      }
+
+      # Step 5: Restart Splunk to apply configuration
+      if ($success) {
+          Write-Host "Restarting Splunk to apply configuration..."
+          try {
+              # Stop Splunk service
+              Stop-Service -Name "SplunkForwarder" -ErrorAction SilentlyContinue
+              Stop-Service -Name "Splunkd" -ErrorAction SilentlyContinue
+              Start-Sleep -Seconds 5
+              
+              # Start Splunk service
+              Start-Service -Name "Splunkd"
+              Write-Host "Splunk service restarted"
+              
+              # Wait for Splunk to come online
+              Write-Host "Waiting for Splunk to start..."
+              Start-Sleep -Seconds 30
+              
+              # Test if Splunk is responding
+              $testAttempts = 0
+              $maxAttempts = 12
+              $splunkOnline = $false
+              
+              while ($testAttempts -lt $maxAttempts -and -not $splunkOnline) {
+                  try {
+                      $testResponse = Invoke-WebRequest -Uri "http://localhost:8000" -TimeoutSec 10 -UseBasicParsing
+                      $splunkOnline = $true
+                      Write-Host "Splunk is online"
+                  } catch {
+                      Write-Host "Waiting for Splunk... (attempt $($testAttempts + 1))"
+                      Start-Sleep -Seconds 10
+                      $testAttempts++
+                  }
+              }
+              
+              if (-not $splunkOnline) {
+                  Write-Host "WARNING: Splunk may not be fully online yet"
+              }
+          } catch {
+              Write-Host "Error restarting Splunk: $($_.Exception.Message)"
+              $success = $false
+          }
+      }
+
+      # Step 6: Test HEC endpoint
+      if ($success) {
+          Write-Host "Testing HEC endpoint..."
+          Start-Sleep -Seconds 10
+          try {
+              $testUrl = "http://localhost:8088/services/collector"
+              $testHeaders = @{
+                  "Authorization" = "Splunk $ExpectedToken"
+                  "Content-Type" = "application/json"
+              }
+              $testBody = @{
+                  event = "HEC configuration test successful"
+                  sourcetype = "splunk:config"
+                  index = $IndexName
+              } | ConvertTo-Json
+              
+              $testResult = Invoke-RestMethod -Uri $testUrl -Headers $testHeaders -Method POST -Body $testBody -TimeoutSec 15
+              Write-Host "HEC endpoint test SUCCESSFUL!"
+          } catch {
+              Write-Host "HEC endpoint test failed: $($_.Exception.Message)"
+              Write-Host "This may be normal - HEC might need additional time to initialize"
+          }
+      }
+
+      # Final summary
+      Write-Host ""
+      Write-Host "Configuration Summary:"
+      Write-Host "====================="
+      Write-Host "Method: File-based configuration"
+      Write-Host "Token Name: $TokenName"
+      Write-Host "Token Value: $ExpectedToken"
+      Write-Host "Index: $IndexName"
+      Write-Host "HEC Port: 8088"
+      Write-Host "SSL Disabled: $DisableSSL"
+      Write-Host "Endpoint: http://localhost:8088/services/collector"
+      Write-Host ""
+      Write-Host "Configuration Files Created:"
+      Write-Host "- $hecConfigDir\inputs.conf"
+      Write-Host "- $indexConfigDir\indexes.conf"
+      Write-Host ""
+      
+      if ($success) {
+          Write-Host "SUCCESS: File-based HEC configuration completed"
+          Write-Host "HEC should be enabled after Splunk restart"
+          Write-Host ""
+          Write-Host "Test command:"
+          Write-Host "curl -k http://localhost:8088/services/collector -H 'Authorization: Splunk $ExpectedToken' -d '{\"event\":\"test\",\"index\":\"$IndexName\"}'"
+      } else {
+          Write-Host "PARTIAL SUCCESS: Some configuration steps may have failed"
+          Write-Host "Check the configuration files manually"
+      }
+    dest: "C:\\ludus\\splunk\\configure_hec.ps1"
+
+
+- name: Execute Splunk HEC configuration script
+  win_shell: |
+    PowerShell -ExecutionPolicy Bypass -File "C:\ludus\splunk\configure_hec.ps1"
+  register: hec_config_result
+
+- name: Display configuration results
+  debug:
+    var: hec_config_result.stdout_lines
+
+- name: Check if configuration was successful
+  assert:
+    that:
+      - "'SUCCESS' in hec_config_result.stdout"
+    fail_msg: |
+      Splunk HEC configuration failed. 
+      Error output: {{ hec_config_result.stderr }}
+      Full output: {{ hec_config_result.stdout }}
+
+- name: Save configuration summary
+  win_copy:
+    content: |
+      Splunk HEC Configuration Summary
+      ===============================
+      
+      Token Name: {{ splunk_hec_token_name }}
+      Token Value: {{ ludus_splunk_expected_token }}
+      Index: {{ splunk_index_name }}
+      
+      Configuration completed: {{ ansible_date_time.iso8601 }}
+      
+      Use this token in your Kubernetes configuration:
+      ludus_k8s_splunk_hec_token: "{{ ludus_splunk_expected_token }}"
+    dest: "C:\\ludus\\splunk\\hec_summary.txt"
+
+- name: Display final configuration summary
+  debug:
+    msg: |
+      Splunk HEC Configuration Complete!
+      
+      ✓ Token: {{ ludus_splunk_expected_token }}
+      ✓ Index: {{ splunk_index_name }}
+      
+      Configuration details saved to: C:\ludus\splunk\hec_summary.txt
