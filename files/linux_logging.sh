@@ -9,6 +9,7 @@ wget --no-check-certificate https://github.com/threathunters-io/laurel/releases/
 sleep 5
 tar xzf laurel-0.7.3-x86_64-musl.tar.gz
 sleep 5
+cd /home/debian/laurel-0.7.3-x86_64-musl.tar.gz/bin/
 install -m755 laurel /usr/local/sbin/laurel
 sleep 5
 useradd --system --home-dir /var/log/laurel --create-home _laurel
