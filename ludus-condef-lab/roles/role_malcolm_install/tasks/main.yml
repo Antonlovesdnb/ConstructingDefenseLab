@@ -36,7 +36,7 @@
   meta: reset_connection
 - name: Download Malcolm Install Script 
   ansible.builtin.shell:
-    cmd: wget --no-check-certificate -O /home/debian/malcolm_debian12_installer.sh "https://raw.githubusercontent.com/Antonlovesdnb/ConstructingDefense/refs/heads/main/malcolm_debian12_installer.sh"
+    cmd: wget --no-check-certificate -O /home/debian/malcolm_debian12_installer.sh "https://raw.githubusercontent.com/Antonlovesdnb/ConstructingDefenseLab/refs/heads/main/files/malcolm_debian12_installer.sh"
 - name: Add Execute Perms to Script
   ansible.builtin.shell:
    cmd: chmod +x /home/debian/malcolm_debian12_installer.sh
