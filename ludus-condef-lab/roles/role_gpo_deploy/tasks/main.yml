@@ -7,7 +7,7 @@
 
       Write-Host "Downloading Zip..."
 
-      Invoke-WebRequest -UseBasicParsing https://github.com/Antonlovesdnb/ConstructingDefense/raw/main/CondefGPO.zip -OutFile C:\Users\Administrator\Desktop\GPO\CondefGPO.zip
+      Invoke-WebRequest -UseBasicParsing https://github.com/Antonlovesdnb/ConstructingDefenseLab/raw/refs/heads/main/files/CondefGPO.zip -OutFile C:\Users\Administrator\Desktop\GPO\CondefGPO.zip
 
       Write-Host "Sleeping for a 5 seconds.."
 
