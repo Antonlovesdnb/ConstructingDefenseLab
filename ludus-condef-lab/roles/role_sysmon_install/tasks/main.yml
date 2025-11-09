@@ -1,14 +1,19 @@
 - name: Create SysmonFiles Directory
   ansible.windows.win_shell: 
-      New-Item -ItemType Directory -Path "C:\SysmonFiles" 
+      New-Item -ItemType Directory -Path "C:\SysmonFiles" -Force
 - name: Download Sysmon Executable
   ansible.windows.win_shell: 
       Invoke-WebRequest -UseBasicParsing -Uri https://live.sysinternals.com/Sysmon.exe -OutFile "C:\SysmonFiles\Sysmon.exe"
 - name: Download Sysmon Config File
   ansible.windows.win_shell: 
-      Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/Antonlovesdnb/ConstructingDefense/main/sysmonconfig.xml -OutFile "C:\SysmonFiles\sysmonconfig.xml"
+      Invoke-WebRequest -UseBasicParsing -Uri https://github.com/Antonlovesdnb/ConstructingDefenseLab/raw/refs/heads/main/files/sysmonconfig.xml -OutFile "C:\SysmonFiles\sysmonconfig.xml"
+- name: Check if Sysmon is installed
+  ansible.windows.win_service:
+    name: Sysmon
+  register: sysmon_service
+  failed_when: false
 - name: Install Sysmon
   ansible.windows.win_shell: C:\SysmonFiles\Sysmon.exe -accepteula -i C:\SysmonFiles\sysmonconfig.xml
   args:
     executable: cmd
-      
+  when: sysmon_service.exists == false
