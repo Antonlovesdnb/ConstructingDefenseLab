@@ -105,7 +105,7 @@ ludus.exe ansible role add -d .\roles\role_sysmon_install\
 ludus.exe ansible role add -d .\roles\role_k8s_telemetry_collection\
 ludus.exe ansible role add -d .\roles\role_splunk_hec_validate\
 ludus.exe ansible role add -d .\roles\role_malcolm_install\
-ludus.exe ansible role add ansible roles add badsectorlabs.ludus_adcs
+ludus.exe ansible role add badsectorlabs.ludus_adcs
 ```
 
 Note here that your `ludus.exe` may be named differently. When running this commands, ensure that you inside the `ludus-condef-lab` directory as well. 
