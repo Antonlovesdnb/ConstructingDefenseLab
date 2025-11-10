@@ -168,7 +168,7 @@ password: `Temp1234!!`
 user: `debian`
 password: `debian`
 
-- Malcolm ( https://10.2.10.17 )
+- Malcolm ( https://PCAP )
 user: `condef`
 password: `Temp1234!!` 
 
