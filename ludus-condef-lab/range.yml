@@ -4,14 +4,15 @@ ludus:
     template: win2022-server-x64-template  # The template that will be the base for this VM (`ludus templates list` to get a list of them)
     vlan: 10            # The VLAN for this VM. This number will be the third octet of the VM's IP and must be 2<=vlan<=255
     ip_last_octet: 11   # The last octet for this VM's IP address. Must be unique in the VLAN.
-    ram_gb: 8           # The amount of RAM for this VM
-    cpus: 4             # The number of cpu cores to allocate to this VM (can provision more CPUs than the host physically has)
+    ram_gb: 6           # The amount of RAM for this VM (optimized from 8GB - Splunk handles lab volume at 6GB)
+    cpus: 2             # The number of cpu cores to allocate to this VM
     windows:            # This key must be set for windows VMs - all subkeys are optional
       sysprep: false    # Set to true to run sysprep before any other tasks on this VM. Default: false
     domain:               # Define this key to put this machine in a domain
       fqdn: condef.local # The FQDN of the domain
       role: primary-dc    # The role of the VM in the domain (primary-dc|alt-dc|member)
     roles:
+      - role_windows_optimize
       - role_gpo_deploy
       - role_sysmon_install
       - role_splunk_install
@@ -33,8 +34,8 @@ ludus:
     template: win2022-server-x64-template
     vlan: 10
     ip_last_octet: 12
-    ram_gb: 8
-    cpus: 4
+    ram_gb: 3           # ADCS is lightweight, 3GB is sufficient
+    cpus: 2
     windows:
       sysprep: true
       install_additional_tools: false     # Install firefox, chrome, VSCode, burp suite, 7zip, process hacker, ilspy and other useful utilities. Default: false
@@ -45,6 +46,7 @@ ludus:
       fqdn: condef.local
       role: member
     roles:
+      - role_windows_optimize
       - badsectorlabs.ludus_adcs
       - role_splunk_collector_certer
     role_vars:
@@ -75,8 +77,8 @@ ludus:
     template: win11-22h2-x64-enterprise-template
     vlan: 10
     ip_last_octet: 13
-    ram_gb: 8
-    cpus: 4
+    ram_gb: 4           # Win11 runs on 4GB with bloat services disabled
+    cpus: 2
     windows:
       sysprep: false
       install_additional_tools: false     # Install firefox, chrome, VSCode, burp suite, 7zip, process hacker, ilspy and other useful utilities. Default: false
@@ -87,6 +89,7 @@ ludus:
       fqdn: condef.local
       role: member
     roles:
+      - role_windows_optimize
       - role_sysmon_install
       - role_splunk_collector_win11v
 
@@ -96,8 +99,8 @@ ludus:
     template: win11-22h2-x64-enterprise-template
     vlan: 10
     ip_last_octet: 14
-    ram_gb: 8
-    cpus: 4
+    ram_gb: 4           # Win11 runs on 4GB with bloat services disabled
+    cpus: 2
     windows:
       sysprep: false
       install_additional_tools: false     # Install firefox, chrome, VSCode, burp suite, 7zip, process hacker, ilspy and other useful utilities. Default: false
@@ -107,7 +110,8 @@ ludus:
     domain:
       fqdn: condef.local
       role: member
-    roles: 
+    roles:
+      - role_windows_optimize
       - role_sysmon_install
       - role_splunk_collector_win11a
 
@@ -117,8 +121,8 @@ ludus:
     template: debian-12-x64-server-template
     vlan: 10
     ip_last_octet: 15
-    ram_gb: 8
-    cpus: 4
+    ram_gb: 2           # Debian CLI box, 2GB is generous
+    cpus: 2
     linux:
       packages:
         - ca-certificates
@@ -131,19 +135,19 @@ ludus:
     template: debian-12-x64-server-template
     vlan: 10
     ip_last_octet: 16
-    ram_gb: 16
-    cpus: 6
+    ram_gb: 5           # k3s uses ~500MB idle vs Minikube's 2GB
+    cpus: 2
     linux: true
     roles:
       - role_linux_logging
-      - role_minikube
+      - role_k3s
       - role_splunk_collector_linuxv
       - name : role_k8s_telemetry_collection
         depends_on:
           - vm_name: "{{ range_id }}-DC"
             role: role_splunk_hec_validate
     role_vars:
-      k8s_cluster_name: "minkube"
+      k8s_cluster_name: "k3s"
       k8s_splunk_index: "kube"
       ludus_k8s_splunk_hec_token: "b448817b-e664-4fce-93fa-79d0c90ba57"
       # Calculate Splunk server IP based on VLAN and octet
@@ -155,8 +159,8 @@ ludus:
     template: debian-12-x64-server-template
     vlan: 10
     ip_last_octet: 17
-    ram_gb: 32
-    cpus: 6
+    ram_gb: 8           # Malcolm tuned: OpenSearch 2GB heap, Logstash 1GB, NetBox/Strelka disabled
+    cpus: 2
     linux: true
     roles:
       - role_malcolm_install

@@ -1,0 +1,37 @@
+- name: Update packages
+  ansible.builtin.shell:
+    cmd: apt-get -y update
+- name: Install Dependencies
+  ansible.builtin.shell:
+    cmd: apt-get -y install ca-certificates curl gnupg
+- name: Install k3s (lightweight Kubernetes - uses ~500MB RAM vs Minikube's 2GB)
+  ansible.builtin.shell:
+    cmd: curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --disable traefik" sh -
+  environment:
+    INSTALL_K3S_SKIP_START: "false"
+- name: Wait for k3s to be ready
+  ansible.builtin.shell:
+    cmd: kubectl wait --for=condition=Ready nodes --all --timeout=120s
+  retries: 5
+  delay: 10
+- name: Create .kube directory for debian user
+  ansible.builtin.file:
+    path: /home/debian/.kube
+    state: directory
+    owner: debian
+    group: debian
+    mode: '0755'
+- name: Copy k3s kubeconfig for debian user
+  ansible.builtin.copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /home/debian/.kube/config
+    owner: debian
+    group: debian
+    mode: '0600'
+    remote_src: yes
+- name: Download Helm
+  ansible.builtin.shell:
+    cmd: curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+- name: Install Helm
+  ansible.builtin.shell:
+    cmd: chmod 700 get_helm.sh && bash get_helm.sh

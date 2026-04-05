@@ -1,0 +1,3 @@
+---
+# role_windows_optimize defaults
+# No configurable variables - this role disables known bloat services

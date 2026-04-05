@@ -1,0 +1,49 @@
+- name: Disable Windows bloat services to reduce RAM usage (~1.5-3GB savings)
+  ansible.windows.win_powershell:
+    script: |
+      # Services safe to disable in a lab environment for RAM savings
+      $services = @(
+        'SysMain',          # Superfetch - preloads apps into RAM (500MB-1GB savings)
+        'WSearch',          # Windows Search Indexer (500MB-1GB savings)
+        'DiagTrack',        # Connected User Experiences and Telemetry (100-300MB)
+        'DoSvc',            # Delivery Optimization - P2P Windows Update (200-500MB)
+        'Spooler',          # Print Spooler (50-100MB)
+        'WerSvc',           # Windows Error Reporting (50-100MB)
+        'MapsBroker',       # Downloaded Maps Manager (50MB)
+        'CDPSvc',           # Connected Devices Platform (100-200MB)
+        'TabletInputService', # Touch Keyboard (50MB)
+        'WbioSrvc',         # Windows Biometric Service (50MB)
+        'lfsvc',            # Geolocation Service
+        'RetailDemo',       # Retail Demo Service
+        'wisvc'             # Windows Insider Service
+      )
+
+      # Xbox services (Win11 only, will silently skip on Server)
+      $xboxServices = @(
+        'XblAuthManager',
+        'XblGameSave',
+        'XboxGipSvc',
+        'XboxNetApiSvc'
+      )
+
+      $allServices = $services + $xboxServices
+
+      foreach ($svc in $allServices) {
+        $service = Get-Service -Name $svc -ErrorAction SilentlyContinue
+        if ($service) {
+          Write-Host "Disabling service: $svc ($($service.DisplayName))"
+          Stop-Service -Name $svc -Force -ErrorAction SilentlyContinue
+          Set-Service -Name $svc -StartupType Disabled -ErrorAction SilentlyContinue
+        } else {
+          Write-Host "Service not found (skipping): $svc"
+        }
+      }
+
+      # Disable Server Manager auto-start on Server editions
+      $serverManager = Get-ScheduledTask -TaskName "ServerManager" -ErrorAction SilentlyContinue
+      if ($serverManager) {
+        Write-Host "Disabling Server Manager auto-start"
+        Disable-ScheduledTask -TaskName "ServerManager" -ErrorAction SilentlyContinue
+      }
+
+      Write-Host "Windows optimization complete - bloat services disabled"

@@ -13,17 +13,6 @@
       - k8s_splunk_index is defined
     fail_msg: "Required variables ludus_k8s_splunk_hec_token, ludus_k8s_splunk_server_ip, k8s_cluster_name, and k8s_splunk_index must be defined"
 
-- name: Add the user 'debian' to primary group of 'docker'
-  ansible.builtin.user:
-    name: debian
-    comment: Debian User
-    uid: 1000
-    groups: docker
-    append: true
-    
-- name: Reset connection to apply new group memberships
-  meta: reset_connection
-
 - name: Set Splunk connection variables
   set_fact:
     splunk_server_ip: "{{ ludus_k8s_splunk_server_ip }}"
@@ -52,28 +41,19 @@
   debug:
     msg: "Successfully connected to Splunk HEC endpoint"
 
-- name: Update package cache
-  package:
-    update_cache: yes
-  become: yes
-
-- name: Install required packages
-  package:
-    name:
-      - curl
-      - wget
-      - apt-transport-https
-      - ca-certificates
-      - gnupg
-      - lsb-release
-      - software-properties-common
-    state: present
-  become: yes
-- name: Create minikube audit policy directory
+- name: Create k3s audit policy directory
   file:
-    path: "{{ ansible_env.HOME }}/.minikube/files/etc/ssl/certs"
+    path: /var/lib/rancher/k3s/server/audit
     state: directory
     mode: '0755'
+  become: yes
+
+- name: Create k3s audit log directory
+  file:
+    path: /var/lib/rancher/k3s/server/logs
+    state: directory
+    mode: '0700'
+  become: yes
 
 - name: Create Kubernetes audit policy
   copy:
@@ -123,31 +103,35 @@
         - level: Metadata
           omitStages:
             - "RequestReceived"
-    dest: "{{ ansible_env.HOME }}/.minikube/files/etc/ssl/certs/audit-policy.yaml"
+    dest: /var/lib/rancher/k3s/server/audit/audit-policy.yaml
     mode: '0644'
+  become: yes
 
-- name: Stop existing minikube cluster
-  command: minikube stop
-  failed_when: false
+- name: Configure k3s with audit logging
+  copy:
+    content: |
+      kube-apiserver-arg:
+        - "audit-policy-file=/var/lib/rancher/k3s/server/audit/audit-policy.yaml"
+        - "audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log"
+        - "audit-log-maxage=30"
+        - "audit-log-maxbackup=3"
+        - "audit-log-maxsize=100"
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0644'
+  become: yes
 
-- name: Start minikube with audit logging
-  ansible.builtin.shell: 
-    cmd: minikube start \
-      --extra-config=apiserver.audit-policy-file=/etc/ssl/certs/audit-policy.yaml \
-      --extra-config=apiserver.audit-log-path=-
-  become: true
-  become_user: debian
+- name: Restart k3s to apply audit logging configuration
+  ansible.builtin.systemd:
+    name: k3s
+    state: restarted
+  become: yes
 
-  environment:
-    CHANGE_MINIKUBE_NONE_USER: true
-  register: minikube_start
-
-- name: Wait for minikube to be ready
+- name: Wait for k3s to be ready after restart
   command: kubectl wait --for=condition=Ready nodes --all --timeout=300s
   become: true
   become_user: debian
   retries: 5
-  delay: 30
+  delay: 15
 
 - name: Add Splunk OpenTelemetry Collector Helm repository
   command: helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart
@@ -209,20 +193,22 @@
 - name: Save deployment summary
   copy:
     content: |
-      Kubernetes Telemetry Deployment Summary
-      =====================================
-      
+      Kubernetes Telemetry Deployment Summary (k3s)
+      ==============================================
+
       Cluster: {{ k8s_cluster_name }}
+      Runtime: k3s (lightweight Kubernetes)
       Splunk Endpoint: {{ splunk_endpoint }}
       HEC Token: {{ splunk_hec_token }}
       Target Index: {{ k8s_splunk_index }}
-      
+      Audit Log: /var/lib/rancher/k3s/server/logs/audit.log
+
       Deployment Status:
       {{ k8s_pods.stdout }}
-      
+
       Collector Pods:
       {{ collector_pods.stdout }}
-      
+
       Deployed: {{ ansible_date_time.iso8601 }}
     dest: "/tmp/k8s_telemetry_deployment.txt"
     mode: '0644'
@@ -230,14 +216,16 @@
 - name: Display deployment completion
   debug:
     msg: |
-      Kubernetes Telemetry Setup Complete!
-      
+      Kubernetes Telemetry Setup Complete! (k3s)
+
       Configuration:
       - Cluster: {{ k8s_cluster_name }}
+      - Runtime: k3s
       - Splunk Endpoint: {{ splunk_endpoint }}
       - Target Index: {{ k8s_splunk_index }}
-      
+      - Audit Log: /var/lib/rancher/k3s/server/logs/audit.log
+
       Collector Status:
       {{ collector_pods.stdout }}
-      
+
       Check Splunk for incoming telemetry data in index "{{ k8s_splunk_index }}"
