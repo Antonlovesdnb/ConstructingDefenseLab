@@ -150,8 +150,9 @@ ludus:
       k8s_cluster_name: "k3s"
       k8s_splunk_index: "kube"
       ludus_k8s_splunk_hec_token: "b448817b-e664-4fce-93fa-79d0c90ba57"
-      # Calculate Splunk server IP based on VLAN and octet
-      ludus_k8s_splunk_server_ip: "10.2.10.11"
+      # Splunk server IP is auto-derived by the role from this host's own IP
+      # (DC is at .11 in the same /24). To override, uncomment below:
+      # ludus_k8s_splunk_server_ip: "10.X.10.11"
 
 
   - vm_name: "{{ range_id }}-pcap"

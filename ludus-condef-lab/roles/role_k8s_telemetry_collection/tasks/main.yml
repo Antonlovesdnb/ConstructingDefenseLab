@@ -8,16 +8,23 @@
   assert:
     that:
       - ludus_k8s_splunk_hec_token is defined
-      - ludus_k8s_splunk_server_ip is defined
       - k8s_cluster_name is defined
       - k8s_splunk_index is defined
-    fail_msg: "Required variables ludus_k8s_splunk_hec_token, ludus_k8s_splunk_server_ip, k8s_cluster_name, and k8s_splunk_index must be defined"
+    fail_msg: "Required variables ludus_k8s_splunk_hec_token, k8s_cluster_name, and k8s_splunk_index must be defined"
+
+- name: Derive DC IP from local network (DC is at .11 in same /24 as this host)
+  set_fact:
+    ludus_k8s_splunk_server_ip: "{{ ludus_k8s_splunk_server_ip | default(ansible_default_ipv4.address.split('.')[0:3] | join('.') + '.11') }}"
 
 - name: Set Splunk connection variables
   set_fact:
     splunk_server_ip: "{{ ludus_k8s_splunk_server_ip }}"
     splunk_hec_token: "{{ ludus_k8s_splunk_hec_token }}"
     splunk_endpoint: "http://{{ ludus_k8s_splunk_server_ip }}:8088/services/collector"
+
+- name: Display derived Splunk endpoint
+  debug:
+    msg: "Using Splunk HEC endpoint: {{ splunk_endpoint }}"
 
 - name: Test Splunk connectivity
   uri:
