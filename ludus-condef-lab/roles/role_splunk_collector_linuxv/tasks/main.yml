@@ -19,9 +19,12 @@
 - name: Update Permissions
   ansible.builtin.shell:
     cmd: chown -R splunkfwd:splunkfwd /opt/splunkforwarder
+- name: Derive DC IP from local network (DC is at .11 in same /24)
+  set_fact:
+    dc_forward_ip: "{{ ansible_default_ipv4.address.split('.')[0:3] | join('.') + '.11' }}"
 - name: Add forwarder server
   ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk add forward-server dc:9997 --accept-license --answer-yes --no-prompt
+    cmd: /opt/splunkforwarder/bin/splunk add forward-server {{ dc_forward_ip }}:9997 --accept-license --answer-yes --no-prompt
 - name: Add Laurel Telemetry to Splunk
   ansible.builtin.shell:
     cmd: /opt/splunkforwarder/bin/splunk add monitor /var/log/laurel/audit.log -index linux

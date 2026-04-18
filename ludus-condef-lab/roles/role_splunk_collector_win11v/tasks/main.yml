@@ -13,9 +13,17 @@
 
       Invoke-WebRequest -UseBasicParsing "https://github.com/Antonlovesdnb/ConstructingDefenseLab/raw/refs/heads/main/files/splunkappswin11v.zip" -OutFile C:\SplunkFiles\splunkappswin11v.zip
 
+      Write-Host "Deriving DC IP from local network..."
+
+      $localIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like "10.*" -and $_.InterfaceAlias -notlike "*Loopback*" } | Select-Object -First 1).IPAddress
+      $parts = $localIP.Split('.')
+      $dcIP = "$($parts[0]).$($parts[1]).$($parts[2]).11"
+      Write-Host "Derived DC IP: $dcIP"
+
       Write-Host "Installing Forwarder..."
 
-      Start-Process msiexec.exe -ArgumentList '/I C:\SplunkFiles\forwarder.msi AGREETOLICENSE=Yes SPLUNKUSERNAME=Condef SPlUNKPASSWORD=Temp1234!! RECEIVING_INDEXER="DC:9997" /quiet' -PassThru -Wait
+      $msiArgs = "/I C:\SplunkFiles\forwarder.msi AGREETOLICENSE=Yes SPLUNKUSERNAME=Condef SPlUNKPASSWORD=Temp1234!! RECEIVING_INDEXER=`"${dcIP}:9997`" /quiet"
+      Start-Process msiexec.exe -ArgumentList $msiArgs -PassThru -Wait
 
       Write-Host "Installing Windows TA App.."
 
