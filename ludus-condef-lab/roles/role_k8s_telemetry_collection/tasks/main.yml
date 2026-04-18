@@ -142,7 +142,7 @@
 
 - name: Add k3s audit log to Splunk forwarder
   ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk add monitor /var/lib/rancher/k3s/server/logs/audit.log -index {{ k8s_splunk_index }} -sourcetype kube:audit
+    cmd: /opt/splunkforwarder/bin/splunk add monitor /var/lib/rancher/k3s/server/logs/audit.log -index {{ k8s_splunk_index }} -sourcetype kube:audit --accept-license --answer-yes --no-prompt
   become: yes
   register: splunk_monitor_add
   failed_when:
