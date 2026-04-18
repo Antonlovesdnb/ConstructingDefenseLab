@@ -93,7 +93,7 @@
 - name: Tune OpenSearch heap for low-resource mode (2GB instead of 10GB)
   ansible.builtin.lineinfile:
     path: /home/debian/Malcolm/config/opensearch.env
-    regexp: '^OPENSEARCH_JAVA_OPTS=.*-Xms.*-Xmx'
+    regexp: '^OPENSEARCH_JAVA_OPTS='
     line: 'OPENSEARCH_JAVA_OPTS=-server -Xmx2g -Xms2g -Xss256k -XX:-HeapDumpOnOutOfMemoryError'
   become: yes
   become_user: debian
@@ -102,7 +102,7 @@
 - name: Tune Logstash heap for low-resource mode (1GB instead of 3GB)
   ansible.builtin.lineinfile:
     path: /home/debian/Malcolm/config/logstash.env
-    regexp: '^LS_JAVA_OPTS=.*-Xms.*-Xmx'
+    regexp: '^LS_JAVA_OPTS='
     line: 'LS_JAVA_OPTS=-server -Xmx1g -Xms1g -Xss256k -XX:-HeapDumpOnOutOfMemoryError'
   become: yes
   become_user: debian
