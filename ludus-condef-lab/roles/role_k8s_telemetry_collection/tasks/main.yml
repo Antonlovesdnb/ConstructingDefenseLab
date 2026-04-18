@@ -133,6 +133,21 @@
   retries: 5
   delay: 15
 
+- name: Add k3s audit log to Splunk forwarder
+  ansible.builtin.shell:
+    cmd: /opt/splunkforwarder/bin/splunk add monitor /var/lib/rancher/k3s/server/logs/audit.log -index {{ k8s_splunk_index }} -sourcetype kube:audit
+  become: yes
+  register: splunk_monitor_add
+  failed_when:
+    - splunk_monitor_add.rc != 0
+    - "'already exists' not in splunk_monitor_add.stdout"
+    - "'already exists' not in splunk_monitor_add.stderr"
+
+- name: Restart Splunk forwarder to pick up new monitor
+  ansible.builtin.shell:
+    cmd: /opt/splunkforwarder/bin/splunk restart
+  become: yes
+
 - name: Add Splunk OpenTelemetry Collector Helm repository
   command: helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart
   register: helm_repo_add
