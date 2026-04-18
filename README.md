@@ -33,7 +33,7 @@ Once the lab is set up, you will have a Splunk instance full of interesting tele
 - Active Directory Certificate Services Events
 - Sysmon
 - Linux telemetry via auditd, transformed to readable JSON with [Laurel](https://github.com/threathunters-io/laurel) 
-- Kubernetes audit logging coming from a local Minikube cluster
+- Kubernetes audit logging coming from a local k3s cluster
 - Full packet capture capabilities - including Zeek & Suricata via [Malcolm](https://malcolm.fyi/)
 
 ## Screenshots 
@@ -51,7 +51,7 @@ Auditd Linux telemetry processed with Laurel:
 
 ![](img/20250913111428.png)
 
-Kubernetes telemetry via Minikube local cluster: 
+Kubernetes telemetry via k3s local cluster: 
 
 ![](img/20250913111452.png)
 
@@ -95,9 +95,10 @@ The Ansible roles and Ludus range configurations will be in the `ludus-condef-la
 Navigate to this folder and then add all the various roles: 
 
 ```
+ludus.exe ansible role add -d .\roles\role_windows_optimize\
 ludus.exe ansible role add -d .\roles\role_gpo_deploy\
 ludus.exe ansible role add -d .\roles\role_linux_logging\
-ludus.exe ansible role add -d .\roles\role_minikube\
+ludus.exe ansible role add -d .\roles\role_k3s\
 ludus.exe ansible role add -d .\roles\role_splunk_collector_certer\
 ludus.exe ansible role add -d .\roles\role_splunk_collector_linuxv\
 ludus.exe ansible role add -d .\roles\role_splunk_collector_win11a\
