@@ -12,11 +12,11 @@ ludus:
       fqdn: condef.local # The FQDN of the domain
       role: primary-dc    # The role of the VM in the domain (primary-dc|alt-dc|member)
     roles:
-      - role_windows_optimize
       - role_gpo_deploy
       - role_sysmon_install
       - role_splunk_install
       - role_splunk_hec_validate
+      - role_windows_optimize
     role_vars:
       splunk_admin_password: "Temp1234!!"
       splunk_hec_token_name: "K8s"
@@ -46,9 +46,9 @@ ludus:
       fqdn: condef.local
       role: member
     roles:
-      - role_windows_optimize
       - badsectorlabs.ludus_adcs
       - role_splunk_collector_certer
+      - role_windows_optimize
     role_vars:
       ludus_adcs_domain: condef.local
       ludus_adcs_ca_host: CERTER
@@ -89,9 +89,9 @@ ludus:
       fqdn: condef.local
       role: member
     roles:
-      - role_windows_optimize
       - role_sysmon_install
       - role_splunk_collector_win11v
+      - role_windows_optimize
 
 
   - vm_name: "{{ range_id }}-WIN11A"
@@ -111,9 +111,9 @@ ludus:
       fqdn: condef.local
       role: member
     roles:
-      - role_windows_optimize
       - role_sysmon_install
       - role_splunk_collector_win11a
+      - role_windows_optimize
 
 
   - vm_name: "{{ range_id }}-linuxa"
