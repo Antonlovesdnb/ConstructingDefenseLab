@@ -41,11 +41,13 @@
     cmd: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
   when: splunk_start_result.failed | default(false)
   failed_when: false
-- name: Wait for splunkd admin port to be ready
-  ansible.builtin.wait_for:
-    port: 8089
-    host: 127.0.0.1
-    timeout: 60
+- name: Wait for splunkd to be ready
+  ansible.builtin.shell:
+    cmd: pgrep -f splunkd
+  retries: 10
+  delay: 3
+  register: splunkd_check
+  until: splunkd_check.rc == 0
 - name: Derive DC IP from local network (DC is at .11 in same /24)
   set_fact:
     dc_forward_ip: "{{ ansible_default_ipv4.address.split('.')[0:3] | join('.') + '.11' }}"
