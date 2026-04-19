@@ -7,16 +7,13 @@
 - name: Install Dependencies
   ansible.builtin.shell:
     cmd: apt-get -y install ca-certificates curl gnupg wget apache2-utils cron dialog git jq make openssl tmux xz-utils ca-certificates lsb-release python3 python3-pip python3-setuptools python3-yaml python3-requests
-- name: Update packages Again
-  ansible.builtin.shell:
-    cmd: apt-get -y update
 - name: Install Docker GPG Keys
   ansible.builtin.shell:
     cmd: install -m 0755 -d /etc/apt/keyrings && curl -kfsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && chmod a+r /etc/apt/keyrings/docker.gpg
-- name: Add Docker Repo 
+- name: Add Docker Repo
   ansible.builtin.shell:
     cmd: echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-- name: Update packages Again
+- name: Update packages after adding Docker repo
   ansible.builtin.shell:
     cmd: apt-get -y update
 - name: Install Docker Packages
