@@ -388,7 +388,7 @@ function SetupAuthentication {
                 --auth-generate-webcerts \
                 --auth-generate-fwcerts \
                 --auth-generate-netbox-passwords \
-                --auth-generate-redis-password \
+                --auth-generate-valkey-password \
                 --auth-generate-postgres-password \
                 --auth-generate-keycloak-db-password \
                 --auth-generate-opensearch-internal-creds || true"
@@ -402,7 +402,7 @@ function SetupAuthentication {
             --auth-generate-webcerts \
             --auth-generate-fwcerts \
             --auth-generate-netbox-passwords \
-            --auth-generate-redis-password \
+            --auth-generate-valkey-password \
             --auth-generate-postgres-password \
             --auth-generate-keycloak-db-password \
             --auth-generate-opensearch-internal-creds || true
