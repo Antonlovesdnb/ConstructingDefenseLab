@@ -1,6 +1,6 @@
 - name: role_k8s_telemetry_collection v1.2.0
   debug:
-    msg: "Running role_k8s_telemetry_collection version 1.2.0"
+    msg: "CANARY-ABCDEF123 :: Running role_k8s_telemetry_collection v1.2.0 with blockinfile approach"
 
 - name: Check if running on Linux
   assert:
@@ -143,6 +143,15 @@
   become_user: debian
   retries: 5
   delay: 15
+
+- name: Ensure Splunk forwarder local config directory exists
+  ansible.builtin.file:
+    path: /opt/splunkforwarder/etc/system/local
+    state: directory
+    owner: splunkfwd
+    group: splunkfwd
+    mode: '0755'
+  become: yes
 
 - name: Add k3s audit log monitor to Splunk forwarder inputs.conf
   ansible.builtin.blockinfile:
