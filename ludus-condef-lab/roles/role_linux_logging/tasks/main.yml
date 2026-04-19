@@ -1,3 +1,7 @@
+- name: role_linux_logging v1.0.0
+  debug:
+    msg: "Running role_linux_logging version 1.0.0"
+
 - name: Install Wget
   ansible.builtin.shell:
     cmd: apt-get -y install wget

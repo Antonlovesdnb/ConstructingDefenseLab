@@ -1,3 +1,7 @@
+- name: role_gpo_deploy v1.1.0
+  debug:
+    msg: "Running role_gpo_deploy version 1.1.0"
+
 - name: Run PowerShell Script to Deploy Constructing Defense GPOs
   ansible.windows.win_powershell:
     script: |

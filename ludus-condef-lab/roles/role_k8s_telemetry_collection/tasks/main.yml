@@ -1,3 +1,7 @@
+- name: role_k8s_telemetry_collection v1.2.0
+  debug:
+    msg: "Running role_k8s_telemetry_collection version 1.2.0"
+
 - name: Check if running on Linux
   assert:
     that:

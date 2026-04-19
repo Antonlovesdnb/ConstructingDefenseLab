@@ -1,3 +1,7 @@
+- name: role_splunk_collector_linuxv v1.2.0
+  debug:
+    msg: "Running role_splunk_collector_linuxv version 1.2.0"
+
 - name: Update packages
   ansible.builtin.shell:
     cmd: apt-get -y update

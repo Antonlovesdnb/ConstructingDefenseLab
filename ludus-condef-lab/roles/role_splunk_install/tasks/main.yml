@@ -1,3 +1,7 @@
+- name: role_splunk_install v1.1.0
+  debug:
+    msg: "Running role_splunk_install version 1.1.0"
+
 - name: Run PowerShell Script to Deploy Splunk Server to DC.condef.local
   ansible.windows.win_powershell:
     script: |

@@ -1,3 +1,7 @@
+- name: role_windows_optimize v1.0.0
+  debug:
+    msg: "Running role_windows_optimize version 1.0.0"
+
 - name: Disable Windows bloat services to reduce RAM usage (~1.5-3GB savings)
   ansible.windows.win_powershell:
     script: |

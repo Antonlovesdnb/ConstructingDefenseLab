@@ -1,3 +1,7 @@
+- name: role_k3s v1.0.0
+  debug:
+    msg: "Running role_k3s version 1.0.0"
+
 - name: Update packages
   ansible.builtin.shell:
     cmd: apt-get -y update

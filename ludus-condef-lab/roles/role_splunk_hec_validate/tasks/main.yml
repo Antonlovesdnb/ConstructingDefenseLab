@@ -1,3 +1,7 @@
+- name: role_splunk_hec_validate v1.0.0
+  debug:
+    msg: "Running role_splunk_hec_validate version 1.0.0"
+
 - name: Check if running on Windows
   assert:
     that:
