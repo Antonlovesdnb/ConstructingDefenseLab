@@ -34,3 +34,7 @@
   ansible.builtin.shell:
     cmd: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
   failed_when: false
+- name: Enable Splunk forwarder to start on boot (systemd)
+  ansible.builtin.shell:
+    cmd: /opt/splunkforwarder/bin/splunk enable boot-start -systemd-managed 1 --accept-license --answer-yes --no-prompt
+  failed_when: false
