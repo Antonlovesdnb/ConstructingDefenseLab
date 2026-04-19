@@ -156,6 +156,7 @@
 
 - name: Start Malcolm, this might take a few minutes - last step
   ansible.builtin.shell:
-    cmd: /home/debian/Malcolm/scripts/start
+    cmd: docker compose --profile malcolm up -d
+    chdir: /home/debian/Malcolm
   become: yes
   become_user: debian
