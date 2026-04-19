@@ -6,13 +6,15 @@
     cmd: apt-get install -y curl
 - name: Make Splunk Directory
   ansible.builtin.shell:
-    cmd: mkdir /opt/splunkforwarder
-- name: Download Splunk Forwarder 
+    cmd: mkdir -p /opt/splunkforwarder
+- name: Download Splunk Forwarder
   ansible.builtin.shell:
     cmd: wget -O /opt/splunkforwarder/splunk.deb "https://download.splunk.com/products/universalforwarder/releases/10.0.1/linux/splunkforwarder-10.0.1-c486717c322b-linux-amd64.deb"
 - name: Add Splunk User
-  ansible.builtin.shell:
-    cmd: useradd -m splunkfwd
+  ansible.builtin.user:
+    name: splunkfwd
+    create_home: yes
+    state: present
 - name: Install Splunk Forwarder
   ansible.builtin.shell:
     cmd: dpkg -i /opt/splunkforwarder/splunk.deb
@@ -27,7 +29,8 @@
     cmd: /opt/splunkforwarder/bin/splunk add forward-server {{ dc_forward_ip }}:9997 --accept-license --answer-yes --no-prompt
 - name: Add Laurel Telemetry to Splunk
   ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk add monitor /var/log/laurel/audit.log -index linux
+    cmd: /opt/splunkforwarder/bin/splunk add monitor /var/log/laurel/audit.log -index linux --accept-license --answer-yes --no-prompt
 - name: Start Splunk
   ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk start
+    cmd: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
+  failed_when: false
