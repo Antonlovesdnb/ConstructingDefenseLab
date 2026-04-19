@@ -156,7 +156,7 @@
 
 - name: Generate htpasswd for Malcolm admin user
   ansible.builtin.shell:
-    cmd: htpasswd -nbB condef 'Temp1234!!' | cut -d: -f2
+    cmd: "htpasswd -nbB condef 'Temp1234!!' | cut -d: -f2"
   register: malcolm_htpasswd
   changed_when: false
 
