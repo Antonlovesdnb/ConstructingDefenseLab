@@ -6,7 +6,7 @@ galaxy_info:
   description: Install Malcolm (Zeek/Suricata/Arkime) with low-resource tuning
   license: GPLv3
   min_ansible_version: "2.9"
-  version: "1.1.0"
+  version: "1.2.0"
   platforms:
     - name: Debian
       versions:

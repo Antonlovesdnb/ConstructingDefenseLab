@@ -1,6 +1,6 @@
-- name: role_malcolm_install v1.1.0
+- name: role_malcolm_install v1.2.0
   debug:
-    msg: "Running role_malcolm_install version 1.1.0"
+    msg: "Running role_malcolm_install version 1.2.0 - explicit auth_setup before start"
 
 - name: Docker fix
   ansible.builtin.shell:
@@ -154,9 +154,51 @@
   become_user: debian
   ignore_errors: yes
 
-- name: Start Malcolm, this might take a few minutes - last step
+- name: Generate htpasswd for Malcolm admin user
+  ansible.builtin.shell:
+    cmd: htpasswd -nbB condef 'Temp1234!!' | cut -d: -f2
+  register: malcolm_htpasswd
+  changed_when: false
+
+- name: Generate openssl hash for Malcolm admin user
+  ansible.builtin.shell:
+    cmd: openssl passwd -1 'Temp1234!!'
+  register: malcolm_openssl
+  changed_when: false
+
+- name: Run Malcolm auth_setup explicitly (non-interactive, all components)
+  ansible.builtin.shell:
+    cmd: >
+      python3 ./scripts/auth_setup
+      --auth-noninteractive
+      --auth-method basic
+      --auth-admin-username 'condef'
+      --auth-admin-password-openssl '{{ malcolm_openssl.stdout }}'
+      --auth-admin-password-htpasswd '{{ malcolm_htpasswd.stdout }}'
+      --auth-generate-webcerts
+      --auth-generate-fwcerts
+      --auth-generate-netbox-passwords
+      --auth-generate-redis-password
+      --auth-generate-postgres-password
+      --auth-generate-keycloak-db-password
+      --auth-generate-opensearch-internal-creds
+    chdir: /home/debian/Malcolm
+  become: yes
+  become_user: debian
+  register: auth_setup_result
+
+- name: Show auth_setup result
+  debug:
+    var: auth_setup_result.stdout_lines
+
+- name: Start Malcolm with docker compose (last step, takes a few minutes)
   ansible.builtin.shell:
     cmd: docker compose --profile malcolm up -d
     chdir: /home/debian/Malcolm
   become: yes
   become_user: debian
+  register: malcolm_start
+
+- name: Show Malcolm start output
+  debug:
+    var: malcolm_start.stdout_lines
