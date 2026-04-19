@@ -1,6 +1,6 @@
-- name: role_splunk_collector_linuxv v1.2.0
+- name: role_splunk_collector_linuxv v1.3.0
   debug:
-    msg: "Running role_splunk_collector_linuxv version 1.2.0"
+    msg: "Running role_splunk_collector_linuxv version 1.3.0 - reordered start/add sequence"
 
 - name: Update packages
   ansible.builtin.shell:
@@ -25,20 +25,48 @@
 - name: Update Permissions
   ansible.builtin.shell:
     cmd: chown -R splunkfwd:splunkfwd /opt/splunkforwarder
+- name: Enable Splunk forwarder boot-start via systemd (handles first-run migration)
+  ansible.builtin.shell:
+    cmd: /opt/splunkforwarder/bin/splunk enable boot-start -systemd-managed 1 -user splunkfwd --accept-license --answer-yes --no-prompt
+  failed_when: false
+- name: Start Splunk via systemd
+  ansible.builtin.systemd:
+    name: SplunkForwarder
+    state: started
+    enabled: yes
+  register: splunk_start_result
+  failed_when: false
+- name: Fallback start if systemd unit not present
+  ansible.builtin.shell:
+    cmd: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
+  when: splunk_start_result.failed | default(false)
+  failed_when: false
+- name: Wait for splunkd admin port to be ready
+  ansible.builtin.wait_for:
+    port: 8089
+    host: 127.0.0.1
+    timeout: 60
 - name: Derive DC IP from local network (DC is at .11 in same /24)
   set_fact:
     dc_forward_ip: "{{ ansible_default_ipv4.address.split('.')[0:3] | join('.') + '.11' }}"
 - name: Add forwarder server
   ansible.builtin.shell:
     cmd: /opt/splunkforwarder/bin/splunk add forward-server {{ dc_forward_ip }}:9997 --accept-license --answer-yes --no-prompt
+  register: add_forward_result
+  failed_when:
+    - add_forward_result.rc != 0
+    - "'already present' not in add_forward_result.stderr"
+    - "'already present' not in add_forward_result.stdout"
 - name: Add Laurel Telemetry to Splunk
   ansible.builtin.shell:
     cmd: /opt/splunkforwarder/bin/splunk add monitor /var/log/laurel/audit.log -index linux --accept-license --answer-yes --no-prompt
-- name: Start Splunk
-  ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
-  failed_when: false
-- name: Enable Splunk forwarder to start on boot (systemd)
-  ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk enable boot-start -systemd-managed 1 --accept-license --answer-yes --no-prompt
+  register: add_monitor_result
+  failed_when:
+    - add_monitor_result.rc != 0
+    - "'already exists' not in add_monitor_result.stderr"
+    - "'already exists' not in add_monitor_result.stdout"
+- name: Restart Splunk to pick up new config
+  ansible.builtin.systemd:
+    name: SplunkForwarder
+    state: restarted
   failed_when: false

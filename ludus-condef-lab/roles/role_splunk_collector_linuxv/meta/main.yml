@@ -6,7 +6,7 @@ galaxy_info:
   description: Install Splunk Universal Forwarder on Linux with boot-start enabled
   license: GPLv3
   min_ansible_version: "2.9"
-  version: "1.2.0"
+  version: "1.3.0"
   platforms:
     - name: Debian
       versions:
