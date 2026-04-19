@@ -3,7 +3,7 @@
     script: |
       Write-Host "Creating Directory..."
 
-      New-Item -Path C:\ -Name SplunkFiles -ItemType Directory
+      New-Item -Path C:\ -Name SplunkFiles -ItemType Directory -Force | Out-Null
 
       Write-Host "Downloading Splunk..."
 
@@ -17,51 +17,41 @@
 
       Start-Process msiexec.exe -ArgumentList '/I C:\SplunkFiles\splunk.msi AGREETOLICENSE=Yes SPLUNKUSERNAME=Condef SPlUNKPASSWORD=Temp1234!! /quiet' -PassThru -Wait
 
+      Write-Host "Waiting for splunkd service to be ready..."
+      $timeout = 60
+      while ($timeout -gt 0) {
+        $svc = Get-Service splunkd -ErrorAction SilentlyContinue
+        if ($svc -and $svc.Status -eq "Running") { break }
+        Start-Sleep -Seconds 2
+        $timeout -= 2
+      }
+
       Write-Host "Creating Indexes..."
 
-      Start-Sleep -Seconds 15
+      $indexes = @("winlogs", "sysmon", "linux", "azure", "aws", "kube", "etw")
+      foreach ($idx in $indexes) {
+        Write-Host "  - adding index: $idx"
+        Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index $idx -auth condef:Temp1234!!" -Wait -NoNewWindow
+      }
 
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index winlogs -auth condef:Temp1234!!"
+      Write-Host "Enabling Listener..."
 
-      Start-Sleep -Seconds 15
-
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index sysmon -auth condef:Temp1234!!"
-
-      Start-Sleep -Seconds 15
-
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index linux -auth condef:Temp1234!!"
-
-      Start-Sleep -Seconds 15
-
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index azure -auth condef:Temp1234!!"
-
-      Start-Sleep -Seconds 15
-
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index aws -auth condef:Temp1234!!"
-
-      Start-Sleep -Seconds 15
-
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index kube -auth condef:Temp1234!!"
-
-      Start-Sleep -Seconds 15
-
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "add index etw -auth condef:Temp1234!!"
-
-      Start-Sleep -Seconds 15
-
-      Write-Host "Enabling Listener ... "
-
-      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "enable listen 9997 -auth condef:Temp1234!!"
-
-      Start-Sleep -Seconds 15
+      Start-Process "C:\Program Files\Splunk\bin\splunk.exe" -ArgumentList "enable listen 9997 -auth condef:Temp1234!!" -Wait -NoNewWindow
 
       Write-Host "Configuring Apps..."
 
-      Expand-Archive -LiteralPath C:\SplunkFiles\splunkappsdc.zip -DestinationPath 'C:\Program Files\Splunk\etc\apps\'
+      Expand-Archive -LiteralPath C:\SplunkFiles\splunkappsdc.zip -DestinationPath 'C:\Program Files\Splunk\etc\apps\' -Force
 
       Restart-Service -Name splunkd
 
-      Start-Sleep -Seconds 30
+      Write-Host "Waiting for splunkd to come back online..."
+      $timeout = 60
+      while ($timeout -gt 0) {
+        $svc = Get-Service splunkd -ErrorAction SilentlyContinue
+        if ($svc -and $svc.Status -eq "Running") { break }
+        Start-Sleep -Seconds 2
+        $timeout -= 2
+      }
 
       Write-Host "Disabling Firewall"
 
