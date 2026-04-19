@@ -77,7 +77,7 @@ ludus:
     template: win11-22h2-x64-enterprise-template
     vlan: 10
     ip_last_octet: 13
-    ram_gb: 4           # Win11 runs on 4GB with bloat services disabled
+    ram_gb: 3           # Win11 runs on 3GB with bloat services disabled
     cpus: 2
     windows:
       sysprep: false
@@ -99,7 +99,7 @@ ludus:
     template: win11-22h2-x64-enterprise-template
     vlan: 10
     ip_last_octet: 14
-    ram_gb: 4           # Win11 runs on 4GB with bloat services disabled
+    ram_gb: 3           # Win11 runs on 3GB with bloat services disabled
     cpus: 2
     windows:
       sysprep: false
@@ -121,7 +121,7 @@ ludus:
     template: debian-12-x64-server-template
     vlan: 10
     ip_last_octet: 15
-    ram_gb: 2           # Debian CLI box, 2GB is generous
+    ram_gb: 4           # Mythic C2 needs Docker + multiple containers
     cpus: 2
     linux:
       packages:
