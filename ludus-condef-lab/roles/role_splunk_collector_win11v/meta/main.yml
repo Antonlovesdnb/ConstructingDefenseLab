@@ -1,4 +1,22 @@
 ---
+galaxy_info:
+  role_name: role_splunk_collector_win11v
+  namespace: constructingdefenselab
+  author: Anton Ovrutsky
+  description: Install Splunk Universal Forwarder on Win11 victim host
+  license: GPLv3
+  min_ansible_version: "2.9"
+  version: "1.1.0"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - splunk
+    - forwarder
+    - windows
+
 dependencies: []
 
-collections: [] # Add any collections needed here
+collections:
+  - ansible.windows

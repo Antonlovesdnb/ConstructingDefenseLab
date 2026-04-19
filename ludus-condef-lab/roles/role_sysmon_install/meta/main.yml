@@ -1,4 +1,22 @@
 ---
+galaxy_info:
+  role_name: role_sysmon_install
+  namespace: constructingdefenselab
+  author: Anton Ovrutsky
+  description: Install Sysmon with SwiftOnSecurity config on Windows hosts
+  license: GPLv3
+  min_ansible_version: "2.9"
+  version: "1.0.0"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - sysmon
+    - windows
+    - telemetry
+
 dependencies: []
 
-collections: [] # Add any collections needed here
+collections:
+  - ansible.windows

@@ -1,4 +1,22 @@
 ---
+galaxy_info:
+  role_name: role_splunk_hec_validate
+  namespace: constructingdefenselab
+  author: Anton Ovrutsky
+  description: Configure and validate Splunk HEC endpoint on the DC
+  license: GPLv3
+  min_ansible_version: "2.9"
+  version: "1.0.0"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - splunk
+    - hec
+    - windows
+
 dependencies: []
 
-collections: [] # Add any collections needed here
+collections:
+  - ansible.windows

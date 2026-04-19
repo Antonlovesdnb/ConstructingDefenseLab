@@ -1,4 +1,22 @@
 ---
+galaxy_info:
+  role_name: role_gpo_deploy
+  namespace: constructingdefenselab
+  author: Anton Ovrutsky
+  description: Deploy Constructing Defense GPOs (logging, cert enroll, disable defender)
+  license: GPLv3
+  min_ansible_version: "2.9"
+  version: "1.1.0"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - windows
+    - gpo
+    - active_directory
+
 dependencies: []
 
-collections: [] # Add any collections needed here
+collections:
+  - ansible.windows

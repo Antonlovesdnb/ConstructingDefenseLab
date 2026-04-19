@@ -1,4 +1,21 @@
 ---
+galaxy_info:
+  role_name: role_k8s_telemetry_collection
+  namespace: constructingdefenselab
+  author: Anton Ovrutsky
+  description: Configure k3s audit logging and Splunk OTEL telemetry collection
+  license: GPLv3
+  min_ansible_version: "2.9"
+  version: "1.2.0"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - kubernetes
+    - splunk
+    - telemetry
+
 dependencies: []
 
-collections: [] # Add any collections needed here
+collections: []

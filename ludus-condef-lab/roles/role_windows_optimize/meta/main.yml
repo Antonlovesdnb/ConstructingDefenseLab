@@ -1,4 +1,21 @@
 ---
+galaxy_info:
+  role_name: role_windows_optimize
+  namespace: constructingdefenselab
+  author: Anton Ovrutsky
+  description: Disable Windows bloat services for reduced RAM usage
+  license: GPLv3
+  min_ansible_version: "2.9"
+  version: "1.0.0"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - windows
+    - optimization
+
 dependencies: []
 
-collections: [] # Add any collections needed here
+collections:
+  - ansible.windows

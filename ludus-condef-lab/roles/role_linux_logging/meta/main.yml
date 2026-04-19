@@ -1,4 +1,21 @@
 ---
+galaxy_info:
+  role_name: role_linux_logging
+  namespace: constructingdefenselab
+  author: Anton Ovrutsky
+  description: Install auditd and Laurel for Linux audit log telemetry
+  license: GPLv3
+  min_ansible_version: "2.9"
+  version: "1.0.0"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - linux
+    - auditd
+    - laurel
+
 dependencies: []
 
-collections: [] # Add any collections needed here
+collections: []
