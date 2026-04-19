@@ -4,7 +4,7 @@ ludus:
     template: win2022-server-x64-template  # The template that will be the base for this VM (`ludus templates list` to get a list of them)
     vlan: 10            # The VLAN for this VM. This number will be the third octet of the VM's IP and must be 2<=vlan<=255
     ip_last_octet: 11   # The last octet for this VM's IP address. Must be unique in the VLAN.
-    ram_gb: 6           # The amount of RAM for this VM (optimized from 8GB - Splunk handles lab volume at 6GB)
+    ram_gb: 5           # Rebalanced down from 6GB to give pcap more headroom
     cpus: 2             # The number of cpu cores to allocate to this VM
     windows:            # This key must be set for windows VMs - all subkeys are optional
       sysprep: false    # Set to true to run sysprep before any other tasks on this VM. Default: false
@@ -34,7 +34,7 @@ ludus:
     template: win2022-server-x64-template
     vlan: 10
     ip_last_octet: 12
-    ram_gb: 3           # ADCS is lightweight, 3GB is sufficient
+    ram_gb: 2           # ADCS is lightweight, 2GB is sufficient
     cpus: 2
     windows:
       sysprep: true
@@ -160,7 +160,7 @@ ludus:
     template: debian-12-x64-server-template
     vlan: 10
     ip_last_octet: 17
-    ram_gb: 8           # Malcolm tuned: OpenSearch 2GB heap, Logstash 1GB, NetBox/Strelka disabled
+    ram_gb: 10          # Malcolm: OpenSearch 2GB heap, Logstash 1GB, NetBox/Strelka disabled. 10GB prevents OOM with Zeek+Suricata+Arkime running concurrently.
     cpus: 2
     linux: true
     roles:
