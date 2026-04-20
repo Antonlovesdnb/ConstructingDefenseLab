@@ -210,7 +210,7 @@
     mode: '0755'
   become: yes
   loop: "{{ malcolm_bind_mounts.stdout_lines }}"
-  when: not (item | regex_search('\\.(yml|yaml|env|conf|json|pem|crt|key)$'))
+  failed_when: false
 
 - name: Start Malcolm with docker compose (last step, takes a few minutes)
   ansible.builtin.shell:
