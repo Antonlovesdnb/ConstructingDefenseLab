@@ -191,6 +191,18 @@
   debug:
     var: auth_setup_result.stdout_lines
 
+- name: Create missing bind-mount directories (valkey renamed from redis)
+  ansible.builtin.file:
+    path: "/home/debian/Malcolm/{{ item }}"
+    state: directory
+    owner: debian
+    group: debian
+    mode: '0755'
+  become: yes
+  loop:
+    - valkey
+    - valkey-cache
+
 - name: Start Malcolm with docker compose (last step, takes a few minutes)
   ansible.builtin.shell:
     cmd: docker compose --profile malcolm up -d
