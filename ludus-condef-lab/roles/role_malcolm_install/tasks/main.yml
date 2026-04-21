@@ -202,10 +202,24 @@
     mode: '0755'
   become: yes
 
-- name: Start Malcolm via auth_setup --start (handles pre-flight file generation)
+- name: Start Malcolm with auth setup and start combined in one call
   ansible.builtin.shell:
     cmd: >
-      python3 ./scripts/auth_setup --start -q
+      python3 ./scripts/auth_setup
+      --auth-noninteractive
+      --auth-method basic
+      --auth-admin-username 'condef'
+      --auth-admin-password-openssl '{{ malcolm_openssl.stdout }}'
+      --auth-admin-password-htpasswd '{{ malcolm_htpasswd.stdout }}'
+      --auth-generate-webcerts
+      --auth-generate-fwcerts
+      --auth-generate-netbox-passwords
+      --auth-generate-valkey-password
+      --auth-generate-postgres-password
+      --auth-generate-keycloak-db-password
+      --auth-generate-opensearch-internal-creds
+      --start
+      -q
     chdir: /home/debian/Malcolm
   become: yes
   become_user: debian
