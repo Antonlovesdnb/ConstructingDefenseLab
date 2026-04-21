@@ -85,12 +85,14 @@
     recurse: yes
   become: yes
   when: malcolm_root_dir.stat.exists
-- name: Run Malcolm Install Script again as non-root to set up auth, this will be quicker and we're almost done 
+- name: Run Malcolm Install Script again as non-root to set up auth, this will be quicker and we're almost done
   ansible.builtin.shell:
-    cmd: bash -x /home/debian/malcolm_debian12_installer.sh 
+    cmd: bash -x /home/debian/malcolm_debian12_installer.sh
     chdir: /home/debian
   become: yes
   become_user: debian
+  async: 1800
+  poll: 10
 - name: Tune OpenSearch heap for low-resource mode (2GB instead of 10GB)
   ansible.builtin.lineinfile:
     path: /home/debian/Malcolm/config/opensearch.env
