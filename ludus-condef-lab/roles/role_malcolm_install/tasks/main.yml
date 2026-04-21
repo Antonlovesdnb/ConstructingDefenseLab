@@ -193,26 +193,16 @@
   debug:
     var: auth_setup_result.stdout_lines
 
-- name: Extract all bind-mount source directories from Malcolm docker-compose.yml
-  ansible.builtin.shell:
-    cmd: "grep -oE 'source:\\s*\\./[^[:space:]]+' /home/debian/Malcolm/docker-compose.yml | awk '{print $2}' | sort -u"
-  register: malcolm_bind_mounts
-  changed_when: false
-
-- name: Show discovered bind-mount directories
-  debug:
-    var: malcolm_bind_mounts.stdout_lines
-
-- name: Pre-create all Malcolm bind-mount directories (defensive fix for rename gaps like valkey)
+- name: Create missing bind-mount directories that Malcolm's installer doesn't create
   ansible.builtin.file:
-    path: "/home/debian/Malcolm/{{ item | regex_replace('^\\./', '') }}"
+    path: "/home/debian/Malcolm/{{ item }}"
     state: directory
     owner: debian
     group: debian
     mode: '0755'
   become: yes
-  loop: "{{ malcolm_bind_mounts.stdout_lines }}"
-  failed_when: false
+  loop:
+    - valkey
 
 - name: Start Malcolm with docker compose (last step, takes a few minutes)
   ansible.builtin.shell:
