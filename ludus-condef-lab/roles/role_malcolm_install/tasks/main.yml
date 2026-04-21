@@ -193,23 +193,24 @@
   debug:
     var: auth_setup_result.stdout_lines
 
-- name: Create missing bind-mount directories that Malcolm's installer doesn't create
+- name: Create valkey directory (Redis->Valkey rename, not handled by installer)
   ansible.builtin.file:
-    path: "/home/debian/Malcolm/{{ item }}"
+    path: /home/debian/Malcolm/valkey
     state: directory
     owner: debian
     group: debian
     mode: '0755'
   become: yes
-  loop:
-    - valkey
 
-- name: Start Malcolm with docker compose (last step, takes a few minutes)
+- name: Start Malcolm via auth_setup --start (handles pre-flight file generation)
   ansible.builtin.shell:
-    cmd: docker compose --profile malcolm up -d
+    cmd: >
+      python3 ./scripts/auth_setup --start -q
     chdir: /home/debian/Malcolm
   become: yes
   become_user: debian
+  async: 600
+  poll: 10
   register: malcolm_start
 
 - name: Show Malcolm start output
