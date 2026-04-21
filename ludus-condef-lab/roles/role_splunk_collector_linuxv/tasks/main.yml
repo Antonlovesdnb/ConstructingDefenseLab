@@ -1,6 +1,6 @@
-- name: role_splunk_collector_linuxv v1.3.0
+- name: role_splunk_collector_linuxv v1.4.0
   debug:
-    msg: "Running role_splunk_collector_linuxv version 1.3.0 - reordered start/add sequence"
+    msg: "Running role_splunk_collector_linuxv version 1.4.0 - direct config writes instead of CLI"
 
 - name: Update packages
   ansible.builtin.shell:
@@ -25,7 +25,42 @@
 - name: Update Permissions
   ansible.builtin.shell:
     cmd: chown -R splunkfwd:splunkfwd /opt/splunkforwarder
-- name: Enable Splunk forwarder boot-start via systemd (handles first-run migration)
+- name: Derive DC IP from local network (DC is at .11 in same /24)
+  set_fact:
+    dc_forward_ip: "{{ ansible_default_ipv4.address.split('.')[0:3] | join('.') + '.11' }}"
+- name: Ensure Splunk local config directory exists
+  ansible.builtin.file:
+    path: /opt/splunkforwarder/etc/system/local
+    state: directory
+    owner: splunkfwd
+    group: splunkfwd
+    mode: '0755'
+  become: yes
+- name: Configure forward server via outputs.conf
+  ansible.builtin.copy:
+    content: |
+      [tcpout]
+      defaultGroup = default-autolb-group
+
+      [tcpout:default-autolb-group]
+      server = {{ dc_forward_ip }}:9997
+    dest: /opt/splunkforwarder/etc/system/local/outputs.conf
+    owner: splunkfwd
+    group: splunkfwd
+    mode: '0644'
+  become: yes
+- name: Configure Laurel audit log monitor via inputs.conf
+  ansible.builtin.copy:
+    content: |
+      [monitor:///var/log/laurel/audit.log]
+      disabled = 0
+      index = linux
+    dest: /opt/splunkforwarder/etc/system/local/inputs.conf
+    owner: splunkfwd
+    group: splunkfwd
+    mode: '0644'
+  become: yes
+- name: Enable Splunk forwarder boot-start via systemd
   ansible.builtin.shell:
     cmd: /opt/splunkforwarder/bin/splunk enable boot-start -systemd-managed 1 -user splunkfwd --accept-license --answer-yes --no-prompt
   failed_when: false
@@ -40,35 +75,4 @@
   ansible.builtin.shell:
     cmd: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
   when: splunk_start_result.failed | default(false)
-  failed_when: false
-- name: Wait for splunkd to be ready
-  ansible.builtin.shell:
-    cmd: pgrep -f splunkd
-  retries: 10
-  delay: 3
-  register: splunkd_check
-  until: splunkd_check.rc == 0
-- name: Derive DC IP from local network (DC is at .11 in same /24)
-  set_fact:
-    dc_forward_ip: "{{ ansible_default_ipv4.address.split('.')[0:3] | join('.') + '.11' }}"
-- name: Add forwarder server
-  ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk add forward-server {{ dc_forward_ip }}:9997 --accept-license --answer-yes --no-prompt
-  register: add_forward_result
-  failed_when:
-    - add_forward_result.rc != 0
-    - "'already present' not in add_forward_result.stderr"
-    - "'already present' not in add_forward_result.stdout"
-- name: Add Laurel Telemetry to Splunk
-  ansible.builtin.shell:
-    cmd: /opt/splunkforwarder/bin/splunk add monitor /var/log/laurel/audit.log -index linux --accept-license --answer-yes --no-prompt
-  register: add_monitor_result
-  failed_when:
-    - add_monitor_result.rc != 0
-    - "'already exists' not in add_monitor_result.stderr"
-    - "'already exists' not in add_monitor_result.stdout"
-- name: Restart Splunk to pick up new config
-  ansible.builtin.systemd:
-    name: SplunkForwarder
-    state: restarted
   failed_when: false
