@@ -640,39 +640,71 @@ function SetupAuthentication {
 
     pushd "$MALCOLM_USER_HOME/Malcolm" >/dev/null 2>&1 || Die "Malcolm directory missing"
 
+    # control.py uses parser.parse_args() (strict), so ONE unrecognized flag
+    # makes argparse exit 2 before generating anything at all -- not even the
+    # secrets whose flags are still valid.
+    #
+    # This bit us already: Malcolm renamed Redis to Valkey, so
+    # --auth-generate-redis-password became --auth-generate-valkey-password.
+    # Since this script tracks main, ask auth_setup which flags it actually
+    # supports and pass only those. A future rename then costs one skipped
+    # secret and a loud warning instead of a dead install.
+    local auth_help
+    auth_help="$("$MALCOLM_PYTHON" ./scripts/auth_setup --help 2>&1)" || \
+        Die "could not run 'auth_setup --help'; Malcolm or its Python env is broken"
+
+    local -a auth_args=(
+        --auth-noninteractive
+        --auth-method basic
+        --auth-admin-username    "$AUTH_USERNAME"
+        --auth-admin-password-openssl  "$AUTH_PASSWORD_OPENSSL"
+        --auth-admin-password-htpasswd "$AUTH_PASSWORD_HTPASSWD"
+    )
+
+    # Optional generators. Both spellings of the Valkey/Redis flag are listed;
+    # whichever this Malcolm build understands is the one that gets used.
+    local -a want_flags=(
+        --auth-generate-webcerts
+        --auth-generate-fwcerts
+        --auth-generate-netbox-passwords
+        --auth-generate-valkey-password
+        --auth-generate-redis-password
+        --auth-generate-postgres-password
+        --auth-generate-keycloak-db-password
+        --auth-generate-opensearch-internal-creds
+    )
+
+    local flag
+    local -a skipped=()
+    for flag in "${want_flags[@]}"; do
+        if grep -q -- "$flag" <<<"$auth_help"; then
+            auth_args+=("$flag")
+        else
+            skipped+=("$flag")
+        fi
+    done
+
+    if [[ ${#skipped[@]} -gt 0 ]]; then
+        echo "NOTE: this Malcolm build does not support: ${skipped[*]}" >&2
+        echo "      (expected for the Redis/Valkey rename; investigate anything else)" >&2
+    fi
+
+    # Sanity check: if the admin flags themselves have gone, stop now rather
+    # than configuring a Malcolm with no administrator.
+    grep -q -- '--auth-admin-password-htpasswd' <<<"$auth_help" || \
+        Die "auth_setup no longer accepts --auth-admin-password-htpasswd; flag set has changed upstream"
+
     # $MALCOLM_PYTHON is an absolute path into the venv, so this does not
     # depend on PATH being set up for whatever shell we happen to be in.
-    echo "Running auth_setup with Malcolm-Test parameters..."
+    echo "Running auth_setup..." >&2
     if [[ $EUID -eq 0 ]]; then
-        su - "$MALCOLM_USER" -c "
-            cd $MALCOLM_USER_HOME/Malcolm &&
-            $MALCOLM_PYTHON ./scripts/auth_setup \
-                --auth-noninteractive \
-                --auth-method basic \
-                --auth-admin-username '$AUTH_USERNAME' \
-                --auth-admin-password-openssl '$AUTH_PASSWORD_OPENSSL' \
-                --auth-admin-password-htpasswd '$AUTH_PASSWORD_HTPASSWD' \
-                --auth-generate-webcerts \
-                --auth-generate-fwcerts \
-                --auth-generate-netbox-passwords \
-                --auth-generate-redis-password \
-                --auth-generate-postgres-password \
-                --auth-generate-keycloak-db-password \
-                --auth-generate-opensearch-internal-creds" || Die "auth_setup failed"
+        # printf %q makes the hashes (which contain '$') safe to hand to su -c
+        local quoted
+        quoted="$(printf '%q ' "$MALCOLM_PYTHON" ./scripts/auth_setup "${auth_args[@]}")"
+        su - "$MALCOLM_USER" -c "cd '$MALCOLM_USER_HOME/Malcolm' && $quoted" || \
+            Die "auth_setup failed"
     else
-        "$MALCOLM_PYTHON" ./scripts/auth_setup \
-            --auth-noninteractive \
-            --auth-method basic \
-            --auth-admin-username "$AUTH_USERNAME" \
-            --auth-admin-password-openssl "$AUTH_PASSWORD_OPENSSL" \
-            --auth-admin-password-htpasswd "$AUTH_PASSWORD_HTPASSWD" \
-            --auth-generate-webcerts \
-            --auth-generate-fwcerts \
-            --auth-generate-netbox-passwords \
-            --auth-generate-redis-password \
-            --auth-generate-postgres-password \
-            --auth-generate-keycloak-db-password \
-            --auth-generate-opensearch-internal-creds || Die "auth_setup failed"
+        "$MALCOLM_PYTHON" ./scripts/auth_setup "${auth_args[@]}" || Die "auth_setup failed"
     fi
 
     popd >/dev/null 2>&1
