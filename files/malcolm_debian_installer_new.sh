@@ -202,6 +202,15 @@ function PythonAtLeast {
 function ProvisionPython {
     echo "Provisioning Python >= $PY_MIN for Malcolm..." >&2
 
+    # Idempotent: the Ludus role runs this script twice (once as root, once as
+    # 'debian'), so don't tear down and rebuild a perfectly good venv on the
+    # second pass.
+    if [[ -x "$MALCOLM_PYTHON" ]] && PythonAtLeast "$MALCOLM_PYTHON" "$PY_MIN" && \
+       "$MALCOLM_PYTHON" -c 'import yaml, requests, dotenv, dateparser, kubernetes, dialog, ruamel.yaml' 2>/dev/null; then
+        echo "Reusing existing venv: $MALCOLM_PYTHON ($("$MALCOLM_PYTHON" -V 2>&1))" >&2
+        return 0
+    fi
+
     $SUDO_CMD DEBIAN_FRONTEND=noninteractive apt-get install -y \
         python3 \
         python3-pip \
@@ -280,6 +289,49 @@ function ProvisionPython {
     done
 
     echo "Malcolm will use: $MALCOLM_PYTHON ($("$MALCOLM_PYTHON" -V 2>&1))" >&2
+}
+
+################################################################################
+# PinMalcolmShebangs - point Malcolm's own Python scripts at the venv.
+#
+# REQUIRED for non-login shells. Ansible's shell module runs "/bin/sh -c",
+# which sources neither ~/.profile nor ~/.bashrc, so the PATH entry written by
+# ProvisionPython is invisible to a task like:
+#     - name: Start Malcolm
+#       ansible.builtin.shell:
+#         cmd: /home/debian/Malcolm/scripts/start
+#         become_user: debian
+# Without this, that task resolves "#!/usr/bin/env python3" to the system
+# Python 3.11 and dies with the same SyntaxError we're trying to avoid.
+# Rewriting the shebang makes ./scripts/start work identically from Ansible,
+# cron, systemd and interactive shells.
+#
+# scripts/{start,stop,restart,status,logs,wipe,auth_setup,configure,
+# netbox-backup,netbox-restore} are all symlinks to control.py / install.py,
+# so rewriting the .py files covers every wrapper.
+#
+# Scope is deliberately limited to scripts/ -- Malcolm's in-container Python
+# must keep using each container's own interpreter.
+function PinMalcolmShebangs {
+    echo "Pinning Malcolm's script shebangs to $MALCOLM_PYTHON..." >&2
+
+    pushd "$MALCOLM_USER_HOME/Malcolm" >/dev/null 2>&1 || Die "Malcolm directory missing"
+
+    local n=0 f
+    while IFS= read -r -d '' f; do
+        if head -1 "$f" | grep -q '^#!.*python3\?$'; then
+            # no sudo here: sed -i renames a temp file into place, which would
+            # leave the result root-owned. The tree is already $MALCOLM_USER's.
+            sed -i "1s|^#!.*python3\?$|#!$MALCOLM_PYTHON|" "$f" && n=$((n+1))
+        fi
+    done < <(find scripts/ -maxdepth 2 -name '*.py' -type f -print0)
+
+    popd >/dev/null 2>&1
+
+    $SUDO_CMD chown -R $MALCOLM_USER:$MALCOLM_USER_GROUP "$MALCOLM_USER_HOME/Malcolm"
+
+    [[ $n -gt 0 ]] || Die "no Malcolm python scripts were pinned; layout may have changed upstream"
+    echo "Pinned $n script(s)." >&2
 }
 
 ################################################################################
@@ -655,6 +707,7 @@ InstallUserLocalBinaries
 ProvisionPython
 InstallDocker
 InstallMalcolm
+PinMalcolmShebangs
 VerifyMalcolmPython
 PullMalcolmImages
 ConfigureLiveCapture
@@ -686,10 +739,10 @@ echo "  ./scripts/restart                           # Restart"
 echo "  ./scripts/logs                              # Logs"
 echo "  ./scripts/status                            # Status"
 echo ""
-echo "Those scripts need Python >= $PY_MIN on PATH. Log out and back in as"
-echo "$MALCOLM_USER first (this script added $MALCOLM_VENV/bin to that account's"
-echo "PATH via ~/.malcolm_python_env), or invoke them explicitly:"
-echo "  $MALCOLM_PYTHON ./scripts/start"
+echo "Those scripts have had their shebangs pinned to $MALCOLM_PYTHON,"
+echo "so they work from Ansible, cron, systemd and interactive shells alike."
+echo "$MALCOLM_VENV/bin was also added to $MALCOLM_USER's PATH"
+echo "via ~/.malcolm_python_env for interactive use."
 echo ""
 echo "Note: Malcolm may take 5-10 minutes to fully start up"
 echo "================================================================"
